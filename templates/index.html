@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}TaggedByBelle{% endblock %}
+{% block content %}
+  <style>
+    .hero { min-height: calc(100vh - 64px); display: grid; place-items: center; text-align: center; }
+    .headline { font-size: clamp(2.5rem, 7vw, 5rem); line-height: 1.1; font-weight: 900; color: #fff; margin: 0; letter-spacing: -0.02em; }
+    .sub { margin-top: 0.75rem; font-size: clamp(1rem, 2vw, 1.25rem); color: #cbd5e1; }
+  </style>
+  <section class="hero">
+    <div>
+      <h1 class="headline">TaggedByBelle</h1>
+      <p class="sub">make your beats unforgettable</p>
+    </div>
+  </section>
+{% endblock %}

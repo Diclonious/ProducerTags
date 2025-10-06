@@ -1,0 +1,38 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}TaggedByBelle{% endblock %}</title>
+    <style>
+      :root { --brand: #0f172a; --accent: #7c3aed; --ink: #0b1020; --glass: rgba(15,23,42,0.6); }
+      * { box-sizing: border-box; }
+      body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, Noto Sans; margin: 0; color: #e5e7eb; background: linear-gradient(145deg, #0b1020 0%, #111827 60%, #0b1020 100%); }
+      .container { max-width: 1120px; margin: 0 auto; padding: 0 1.25rem; }
+      .banner { position: sticky; top: 0; z-index: 50; backdrop-filter: saturate(180%) blur(14px); background: linear-gradient(180deg, var(--glass), rgba(15,23,42,0.35)); border-bottom: 1px solid rgba(255,255,255,0.08); }
+      .banner-inner { display: flex; align-items: center; gap: 0.75rem; height: 64px; }
+      .brand { font-weight: 800; letter-spacing: 0.2px; color: #fff; margin-right: auto; font-size: 1.1rem; }
+      .nav a { display: inline-block; padding: 0.5rem 0.9rem; border-radius: 8px; color: #cbd5e1; text-decoration: none; transition: all .2s ease; }
+      .nav a:hover { background: rgba(124,58,237,0.12); color: #fff; }
+      .cta { display:inline-block; margin-left: .5rem; background: var(--accent); color: #fff; padding: 0.5rem 0.9rem; border-radius: 10px; text-decoration: none; box-shadow: 0 6px 20px rgba(124,58,237,0.35); }
+      main { padding: 2rem 0; }
+    </style>
+  </head>
+  <body>
+    <header class="banner">
+      <div class="container banner-inner">
+        <div class="brand">TaggedByBelle</div>
+        <nav class="nav">
+          <a href="/">Main</a>
+          <a href="/article">Article</a>
+          <a class="cta" href="/login">Login</a>
+        </nav>
+      </div>
+    </header>
+    <main class="container">
+      {% block content %}{% endblock %}
+    </main>
+  </body>
+  </html>
+
+
