@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Choose a Package{% endblock %}
+
+{% block content %}
+  <h2>Choose your package</h2>
+  <p class="muted">Pick a package that fits your order. Click "Select" to continue to the order form.</p>
+
+  <div class="grid" role="list">
+    {# Expect `packages` to be a list of dicts: 
+       [{ "id":1, "name":"Basic", "price":10.0, "delivery_days":1, "tag_count":2, "features":["Simple tag","1 revision"] }, ...]
+    #}
+    {% for p in packages %}
+      <div class="card" role="listitem">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+          <div>
+            <h3>{{ p.name }}</h3>
+            <div class="meta">{{ p.tag_count }} tag{{ 's' if p.tag_count != 1 }} • {{ p.delivery_days }} day{{ 's' if p.delivery_days != 1 }} delivery</div>
+          </div>
+          <div class="price">${{ "%.2f"|format(p.price) }}</div>
+        </div>
+
+        <p class="muted">{{ p.description if p.description is defined else "" }}</p>
+
+        {% if p.features %}
+          <ul>
+            {% for f in p.features %}
+              <li class="muted">{{ f }}</li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+
+        <div class="actions">
+          <!-- We use GET so the order page can prefill package_id -->
+          <form action="/order/new" method="get" style="margin:0">
+            <input type="hidden" name="package_id" value="{{ p.id }}">
+            <button class="btn" type="submit">Select</button>
+          </form>
+
+          <form action="/package/info" method="get" style="margin:0">
+            <input type="hidden" name="package_id" value="{{ p.id }}">
+            <button class="btn ghost" type="submit">Details</button>
+          </form>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% endblock %}
