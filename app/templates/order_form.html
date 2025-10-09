@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Place New Order{% endblock %}
+
+{% block content %}
+<h2>Place Your Order: {{ package.name }}</h2>
+<p>Delivery: {{ package.delivery_days }} day(s) | Tags allowed: {{ package.tag_count }}</p>
+
+<form action="/order/submit" method="post">
+    <input type="hidden" name="package_id" value="{{ package.id }}">
+
+    {% for i in range(package.tag_count) %}
+    <div>
+        <label for="tag{{ i }}">Tag {{ i + 1 }}:</label>
+        <input type="text" id="tag{{ i }}" name="tags" required>
+
+        <label for="mood{{ i }}">Mood:</label>
+        <select name="moods" id="mood{{ i }}">
+            <option value="happy">Happy</option>
+            <option value="dark">Dark</option>
+            <option value="sad">Sad</option>
+            <option value="funny">Funny</option>
+        </select>
+    </div>
+    {% endfor %}
+
+    <div>
+        <label for="details">Details (optional):</label>
+        <textarea name="details" id="details"></textarea>
+    </div>
+
+    <button type="submit">Submit Order</button>
+</form>
+{% endblock %}

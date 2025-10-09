@@ -31,16 +31,12 @@
         {% endif %}
 
         <div class="actions">
-          <!-- We use GET so the order page can prefill package_id -->
-          <form action="/order/new" method="get" style="margin:0">
+
+          <form action="/order/new" method="post" style="margin:0">
             <input type="hidden" name="package_id" value="{{ p.id }}">
             <button class="btn" type="submit">Select</button>
           </form>
 
-          <form action="/package/info" method="get" style="margin:0">
-            <input type="hidden" name="package_id" value="{{ p.id }}">
-            <button class="btn ghost" type="submit">Details</button>
-          </form>
         </div>
       </div>
     {% endfor %}
