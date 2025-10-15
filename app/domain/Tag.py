@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy.orm import relationship
 from app.db.database import Base
 
-from sqlalchemy.orm import relationship
 
 class Tag(Base):
     __tablename__ = "tags"
@@ -11,5 +11,4 @@ class Tag(Base):
     name = Column(String(255), nullable=False)
     mood = Column(String(50), nullable=False)
 
-    # Relationship to order
     order = relationship("Order", back_populates="tags")

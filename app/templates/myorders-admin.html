@@ -1,20 +1,18 @@
 {% extends "base.html" %}
-{% block title %}My Orders{% endblock %}
+{% block title %}All Orders{% endblock %}
 
 {% block content %}
-<h2>My Orders</h2>
-<div class="grid">
+<h2>All Orders</h2>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
    {% for order in orders %}
-   <div class="card" style="position: relative; padding: 1rem; border: 1px solid #ccc; margin-bottom: 1rem;">
-       <h3>{{ order.package.name }}</h3>
+   <div class="card p-4 shadow rounded hover:shadow-lg transition">
+       <h3>Order #{{ order.id }}</h3>
+       <p><strong>User:</strong> {{ order.user.username }}</p>
        <p><strong>Details:</strong> {{ order.details or "N/A" }}</p>
-       <p><strong>Tags:</strong></p>
-       <ul>
-           {% for tag in order.tags %}
-           <li>Tag {{ loop.index }}: {{ tag.name }} | Mood: {{ tag.mood }}</li>
-           {% endfor %}
-       </ul>
+       <p><strong>Tags:</strong> {{ order.tags | length }}</p>
        <p><strong>Due in:</strong> <span id="timer-{{ order.id }}">Calculating...</span></p>
+       <a href="/order/{{ order.id }}" class="text-blue-500 hover:underline mt-2 block">View Details</a>
+
        <script>
            (function() {
                var countdownDate = new Date("{{ order.due_date.isoformat() }}").getTime();
@@ -39,6 +37,8 @@
            })();
        </script>
    </div>
+   {% else %}
+   <p>No orders found.</p>
    {% endfor %}
 </div>
 {% endblock %}
