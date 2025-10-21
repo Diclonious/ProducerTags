@@ -4,6 +4,16 @@
 {% block content %}
 <h2 class="page-title">Order #{{ order.id }} - {{ order.user.username }}</h2>
 
+
+<!-- Order Started Notification Card -->
+<div class="notification-card">
+    <div class="notification-accent"></div>
+    <div class="notification-content">
+        <h3 class="notification-title">Order started</h3>
+        <p class="notification-message">{{ order.user.username }} sent all the information you need so you can start working on this order. You got this!</p>
+    </div>
+</div>
+
 <!-- Delivery Information Card -->
 <div class="delivery-card">
     <div class="delivery-header">
@@ -13,21 +23,39 @@
         <div class="delivery-row">
             <div class="delivery-item">
                 <span class="delivery-label">Time for delivery:</span>
-                <span class="delivery-value">{{ order.package.delivery_days if order.package else 'N/A' }} day{{ 's' if order.package and order.package.delivery_days != 1 else '' }}</span>
+                <span class="delivery-value">
+                    {% if order.package and order.package.delivery_days %}
+                        {{ order.package.delivery_days }} day{{ 's' if order.package.delivery_days != 1 else '' }}
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </span>
             </div>
             <div class="delivery-item">
                 <span class="delivery-label">Ordered by:</span>
-                <span class="delivery-value">{{ order.user.username }}</span>
+                <span class="delivery-value">{{ order.user.username if order.user else 'Unknown' }}</span>
             </div>
         </div>
         <div class="delivery-row">
             <div class="delivery-item">
                 <span class="delivery-label">Delivery date:</span>
-                <span class="delivery-value">{{ order.due_date.strftime('%B %d, %Y') if order.due_date else 'N/A' }}</span>
+                <span class="delivery-value">
+                    {% if order.due_date %}
+                        {{ order.due_date.strftime('%B %d, %Y') }}
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </span>
             </div>
             <div class="delivery-item">
                 <span class="delivery-label">Total Price:</span>
-                <span class="delivery-value">${{ order.package.price if order.package else 'N/A' }}</span>
+                <span class="delivery-value">
+                    {% if order.package and order.package.price %}
+                        ${{ order.package.price }}
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </span>
             </div>
         </div>
         <div class="delivery-row">
@@ -40,6 +68,220 @@
         </div>
     </div>
 </div>
+
+<!-- Requirements Card -->
+<div class="requirements-card">
+    <div class="requirements-header">
+        <h3 class="requirements-title">REQUIREMENTS</h3>
+    </div>
+    <div class="requirements-content">
+        {% if order.tags %}
+        <div class="tags-section">
+            <div class="tags-grid">
+                {% for tag in order.tags %}
+                <div class="tag-item">
+                    <span class="tag-name">{{ tag.name }}</span>
+                    <span class="tag-separator">|</span>
+                    <span class="tag-mood">{{ tag.mood }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if order.details %}
+        <div class="requirements-text">
+            <div class="requirements-label">Order Details:</div>
+            <div class="requirements-description">{{ order.details }}</div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Delivery Cards -->
+{% if order.deliveries %}
+    {% for delivery in order.deliveries %}
+    <div class="delivery-card">
+        <div class="delivery-header">
+            <h3 class="delivery-title">DELIVERY #{{ delivery.delivery_number }}</h3>
+        </div>
+        <div class="delivery-content">
+            <div class="delivery-message">
+                <div class="message-sender">
+                    {% if request.session.get('is_admin') %}
+                        <div class="sender-avatar">Me</div>
+                    {% else %}
+                        <div class="sender-avatar">{{ order.user.username[0]|upper if order.user else 'A' }}</div>
+                    {% endif %}
+                    <span class="sender-name">Me</span>
+                </div>
+                <div class="message-text">{{ delivery.response_text or 'Your order has been delivered.' }}</div>
+            </div>
+            
+            {% if delivery.delivery_file %}
+            <div class="attachments-section">
+                <h4 class="attachments-title">ATTACHMENTS</h4>
+                <div class="attachment-grid">
+                    <div class="attachment-item">
+                        <div class="attachment-visual">
+                            <div class="audio-icon">
+                                <div class="play-button"></div>
+                            </div>
+                            <div class="waveform"></div>
+                        </div>
+                        <div class="attachment-info">
+                            <div class="file-name">{{ delivery.delivery_file }}</div>
+                            <div class="file-size">({{ delivery.delivery_file|length }} KB)</div>
+                        </div>
+                        <a href="/order/{{ order.id }}/download-delivered-file/{{ delivery.id }}" class="download-btn">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 15L12 3M12 15L8 11M12 15L16 11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M20 17V19C20 20.1046 19.1046 21 18 21H6C4.89543 21 4 20.1046 4 19V17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+{% elif order.status == 'Delivered' and order.delivery_file %}
+<!-- Fallback for old deliveries without delivery records -->
+<div class="delivery-card">
+    <div class="delivery-header">
+        <h3 class="delivery-title">DELIVERY #1</h3>
+    </div>
+    <div class="delivery-content">
+        <div class="delivery-message">
+            <div class="message-sender">
+                {% if request.session.get('is_admin') %}
+                    <div class="sender-avatar">Me</div>
+                {% else %}
+                    <div class="sender-avatar">{{ order.user.username[0]|upper if order.user else 'A' }}</div>
+                {% endif %}
+                <span class="sender-name">Me</span>
+            </div>
+            <div class="message-text">{{ order.response or 'Your order has been delivered.' }}</div>
+        </div>
+        
+        <div class="attachments-section">
+            <h4 class="attachments-title">ATTACHMENTS</h4>
+            <div class="attachment-grid">
+                <div class="attachment-item">
+                    <div class="attachment-visual">
+                        <div class="audio-icon">
+                            <div class="play-button"></div>
+                        </div>
+                        <div class="waveform"></div>
+                    </div>
+                    <div class="attachment-info">
+                        <div class="file-name">{{ order.delivery_file }}</div>
+                        <div class="file-size">({{ order.delivery_file|length }} KB)</div>
+                    </div>
+                    <a href="/order/{{ order.id }}/download-delivered-file/legacy" class="download-btn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 15L12 3M12 15L8 11M12 15L16 11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M20 17V19C20 20.1046 19.1046 21 18 21H6C4.89543 21 4 20.1046 4 19V17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Dispute Card -->
+{% if order.status == 'In dispute' %}
+<div class="dispute-card">
+    <div class="dispute-header">
+        <h3 class="dispute-title">DISPUTE RESOLUTION</h3>
+    </div>
+    <div class="dispute-content">
+        <div class="dispute-info">
+            <div class="dispute-type">
+                <span class="dispute-label">Request Type:</span>
+                <span class="dispute-value">{{ order.request_type or 'N/A' }}</span>
+            </div>
+            
+            {% if order.cancellation_reason %}
+            <div class="dispute-detail">
+                <span class="dispute-label">Cancellation Reason:</span>
+                <span class="dispute-value">{{ order.cancellation_reason }}</span>
+            </div>
+            {% endif %}
+            
+            {% if order.cancellation_message %}
+            <div class="dispute-detail">
+                <span class="dispute-label">Message:</span>
+                <span class="dispute-value">{{ order.cancellation_message }}</span>
+            </div>
+            {% endif %}
+            
+            {% if order.extension_days %}
+            <div class="dispute-detail">
+                <span class="dispute-label">Extension Requested:</span>
+                <span class="dispute-value">{{ order.extension_days }} days</span>
+            </div>
+            {% endif %}
+            
+            {% if order.extension_reason %}
+            <div class="dispute-detail">
+                <span class="dispute-label">Extension Reason:</span>
+                <span class="dispute-value">{{ order.extension_reason }}</span>
+            </div>
+            {% endif %}
+        </div>
+        
+        {% if request.session.get('is_admin') %}
+        <div class="dispute-actions">
+            <form action="/order/{{ order.id }}/approve-request" method="post" style="display: inline;">
+                <button type="submit" class="dispute-btn approve-btn">
+                    <span class="btn-icon">✓</span>
+                    Approve Request
+                </button>
+            </form>
+            <form action="/order/{{ order.id }}/reject-request" method="post" style="display: inline;">
+                <button type="submit" class="dispute-btn reject-btn">
+                    <span class="btn-icon">✗</span>
+                    Reject Request
+                </button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Admin Actions -->
+{% if request.session.get('is_admin') %}
+<div class="admin-actions">
+    {% if order.status in ['Active', 'Late'] %}
+    <button class="deliver-btn" onclick="openDeliverModal()">
+        <span class="deliver-icon">📦</span>
+        Deliver Order
+    </button>
+    {% elif order.status == 'Revision' %}
+    <button class="deliver-again-btn" onclick="openDeliverModal()">
+        <span class="deliver-icon">🔄</span>
+        Deliver Again
+    </button>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- User Actions -->
+{% if not request.session.get('is_admin') and order.status == 'Delivered' %}
+<div class="user-actions">
+    <form action="/order/{{ order.id }}/complete" method="post" style="display: inline;">
+        <button type="submit" class="complete-btn">
+            <span class="complete-icon">✅</span>
+            Mark Order as Complete
+        </button>
+    </form>
+</div>
+{% endif %}
 
 <!-- Support Card -->
 {% if order.status not in ['Cancelled', 'Completed'] %}
@@ -73,119 +315,180 @@
 </div>
 {% endif %}
 
-<div class="order-card">
-    <div class="order-info">
-        <p><strong>Status:</strong> <span class="status-badge {{ order.status|lower }}">{{ order.status }}</span></p>
-        <p><strong>Package:</strong> {{ order.package.name if order.package else 'N/A' }}</p>
-        <p><strong>Price:</strong> ${{ order.package.price if order.package else 'N/A' }}</p>
-    </div>
-
-    <!-- Admin Delivery Form -->
-    {% if is_admin and order.status in ['Active', 'Revision'] %}
-    <form action="/order/{{ order.id }}/deliver" method="post" enctype="multipart/form-data" class="form-section">
-        <div class="form-group">
-            <label>Upload Delivery File</label>
-            <input type="file" name="file" required>
+<!-- Deliver Order Modal -->
+<div id="deliverModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">Deliver Order</h3>
+            <span class="close" onclick="closeDeliverModal()">&times;</span>
         </div>
-        <div class="form-group">
-            <label>Response / Comment</label>
-            <textarea name="response_text" rows="4" placeholder="Enter your response..." required>{{ order.response or '' }}</textarea>
-        </div>
-        <button type="submit" class="btn-submit green">Submit Delivery</button>
-    </form>
-    {% endif %}
-
-    <!-- Display delivered file & admin message -->
-    {% if order.status in ['Delivered', 'Revision', 'Completed'] %}
-    <div class="form-section delivered-info">
-        {% if file_url %}
-        <p><strong>Delivered File:</strong>
-            <a href="{{ file_url }}" target="_blank" class="file-link">{{ order.delivery_file }}</a>
-        </p>
-        {% if not is_admin and order.status in ['Delivered','Revision','Completed'] %}
-        <p>
-          <a href="{{ file_url }}" download class="btn-download">Download delivery</a>
-        </p>
-        {% endif %}
-        {% endif %}
-        <p><strong>Admin Message:</strong> {{ order.response or "No message provided" }}</p>
-    </div>
-    {% endif %}
-
-    <!-- Dispute Resolution Section -->
-    {% if order.status == 'In dispute' %}
-    <div class="form-section dispute-section">
-        <h4 class="dispute-title">Pending Request Approval</h4>
-        
-        {% if order.requested_by_admin == 'true' %}
-            <!-- Admin made the request, user needs to approve -->
-            {% if not is_admin %}
-            <div class="dispute-info">
-                <p><strong>Request Type:</strong> {{ order.request_type|title }}</p>
-                {% if order.request_type == 'cancellation' %}
-                <p><strong>Cancellation Reason:</strong> {{ order.cancellation_reason|title if order.cancellation_reason else 'Not specified' }}</p>
-                <p><strong>Admin Message:</strong> {{ order.cancellation_message or 'No message provided' }}</p>
-                {% elif order.request_type == 'extend_delivery' %}
-                <p><strong>Extension Days:</strong> {{ order.extension_days }} day{{ 's' if order.extension_days != 1 else '' }}</p>
-                <p><strong>Extension Reason:</strong> {{ order.extension_reason or 'No reason provided' }}</p>
-                {% endif %}
-                {% if order.request_message %}
-                <p><strong>Additional Details:</strong> {{ order.request_message }}</p>
-                {% endif %}
+        <form action="/order/{{ order.id }}/deliver" method="post" enctype="multipart/form-data" id="deliverForm">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="response_text">Delivery Message</label>
+                    <textarea id="response_text" name="response_text" rows="4" placeholder="Add a message for the customer about the delivery..." required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="file">Upload File</label>
+                    <input type="file" id="file" name="file" accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.zip,.rar,.wav,.mp3" required>
+                    <small class="file-help">Supported formats: PDF, DOC, DOCX, TXT, JPG, PNG, GIF, ZIP, RAR, WAV, MP3</small>
+                </div>
             </div>
-            
-            <div class="dispute-actions">
-                <form action="/order/{{ order.id }}/approve-request" method="post" style="display: inline;">
-                    <button type="submit" class="btn-submit green">Approve Request</button>
-                </form>
-                <form action="/order/{{ order.id }}/reject-request" method="post" style="display: inline;">
-                    <button type="submit" class="btn-submit red">Reject Request</button>
-                </form>
+            <div class="modal-footer">
+                <button type="button" class="btn-modal secondary" onclick="closeDeliverModal()">Cancel</button>
+                <button type="submit" class="btn-modal primary">Deliver Order</button>
             </div>
-            {% endif %}
-        {% else %}
-            <!-- User made the request, admin needs to approve -->
-            {% if is_admin %}
-            <div class="dispute-info">
-                <p><strong>Request Type:</strong> {{ order.request_type|title }}</p>
-                {% if order.request_type == 'cancellation' %}
-                <p><strong>Cancellation Reason:</strong> {{ order.cancellation_reason|title if order.cancellation_reason else 'Not specified' }}</p>
-                <p><strong>User Message:</strong> {{ order.cancellation_message or 'No message provided' }}</p>
-                {% endif %}
-                {% if order.request_message %}
-                <p><strong>Additional Details:</strong> {{ order.request_message }}</p>
-                {% endif %}
-            </div>
-            
-            <div class="dispute-actions">
-                <form action="/order/{{ order.id }}/approve-request" method="post" style="display: inline;">
-                    <button type="submit" class="btn-submit green">Approve Request</button>
-                </form>
-                <form action="/order/{{ order.id }}/reject-request" method="post" style="display: inline;">
-                    <button type="submit" class="btn-submit red">Reject Request</button>
-                </form>
-            </div>
-            {% endif %}
-        {% endif %}
-    </div>
-    {% endif %}
-
-    <!-- User Actions -->
-    {% if not is_admin and order.status == 'Delivered' %}
-    <div class="form-section user-actions">
-        <form action="/order/{{ order.id }}/complete" method="post">
-            <button type="submit" class="btn-submit blue">Mark as Complete</button>
         </form>
     </div>
-    {% endif %}
 </div>
-
 
 <style>
 .page-title {
     font-size: 1.8rem;
     margin-bottom: 1rem;
     color: #fff;
+}
+
+/* Notification Card */
+.notification-card {
+    background: #ffffff;
+    border-radius: 12px;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    display: flex;
+    align-items: stretch;
+}
+
+.notification-accent {
+    width: 4px;
+    background: #3b82f6;
+    flex-shrink: 0;
+}
+
+.notification-content {
+    padding: 1.5rem;
+    flex: 1;
+}
+
+.notification-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin: 0 0 0.5rem 0;
+}
+
+.notification-message {
+    font-size: 0.95rem;
+    color: #6b7280;
+    margin: 0;
+    line-height: 1.5;
+}
+
+/* Requirements Card */
+.requirements-card {
+    background: #ffffff;
+    border-radius: 12px;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.requirements-header {
+    background: #f8f9fa;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.requirements-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #212529;
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.requirements-content {
+    padding: 1.5rem;
+}
+
+.tags-section {
+    margin-bottom: 1.5rem;
+}
+
+.tags-section:last-child {
+    margin-bottom: 0;
+}
+
+.tags-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.tag-item {
+    display: flex;
+    align-items: center;
+    background: #f1f3f4;
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9rem;
+    border: 1px solid #e1e5e9;
+}
+
+.tag-name {
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.tag-separator {
+    margin: 0 0.5rem;
+    color: #6b7280;
+    font-weight: 500;
+}
+
+.tag-mood {
+    color: #3b82f6;
+    font-weight: 500;
+}
+
+.requirements-text {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1rem;
+    border-left: 4px solid #3b82f6;
+}
+
+.requirements-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.requirements-description {
+    font-size: 0.95rem;
+    color: #1f2937;
+    line-height: 1.6;
+    white-space: pre-wrap;
+}
+
+@media (max-width: 768px) {
+    .requirements-content {
+        padding: 1rem;
+    }
+    
+    .tags-grid {
+        gap: 0.5rem;
+    }
+    
+    .tag-item {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.85rem;
+    }
 }
 
 /* Delivery Information Card */
@@ -584,5 +887,588 @@
 .btn-modal.secondary:hover {
     background: #4b5563;
 }
+
+/* Admin Actions */
+.admin-actions {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 2rem;
+}
+
+.deliver-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #10b981;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+    box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+}
+
+.deliver-btn:hover {
+    background: #059669;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(16, 185, 129, 0.4);
+}
+
+.deliver-btn:active {
+    transform: translateY(0);
+}
+
+.deliver-again-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #f59e0b;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+    box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);
+}
+
+.deliver-again-btn:hover {
+    background: #d97706;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(245, 158, 11, 0.4);
+}
+
+.deliver-again-btn:active {
+    transform: translateY(0);
+}
+
+.deliver-icon {
+    font-size: 1.1rem;
+}
+
+/* User Actions */
+.user-actions {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 2rem;
+}
+
+.complete-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #10b981;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+    box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+}
+
+.complete-btn:hover {
+    background: #059669;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(16, 185, 129, 0.4);
+    color: #ffffff;
+    text-decoration: none;
+}
+
+.complete-btn:active {
+    transform: translateY(0);
+}
+
+.complete-icon {
+    font-size: 1.1rem;
+}
+
+/* Modal Enhancements */
+.modal-body .form-group {
+    margin-bottom: 1.5rem;
+}
+
+.modal-body .form-group:last-child {
+    margin-bottom: 0;
+}
+
+.file-help {
+    display: block;
+    margin-top: 0.5rem;
+    color: #6b7280;
+    font-size: 0.875rem;
+}
+
+.modal-body textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+.modal-body input[type="file"] {
+    padding: 0.5rem;
+    border: 2px dashed #d1d5db;
+    background: #f9fafb;
+    border-radius: 8px;
+    transition: border-color 0.2s;
+}
+
+.modal-body input[type="file"]:hover {
+    border-color: #3b82f6;
+}
+
+.modal-body input[type="file"]:focus {
+    outline: none;
+    border-color: #3b82f6;
+    background: #ffffff;
+}
+
+/* Delivery Card Styles */
+.delivery-card {
+    background: #ffffff;
+    border-radius: 12px;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.delivery-header {
+    background: #f8f9fa;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.delivery-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #212529;
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.delivery-content {
+    padding: 1.5rem;
+}
+
+.delivery-message {
+    margin-bottom: 1.5rem;
+}
+
+.message-sender {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.sender-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #3b82f6;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.875rem;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.sender-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #212529;
+}
+
+.message-text {
+    font-size: 0.95rem;
+    color: #6b7280;
+    line-height: 1.6;
+    white-space: pre-wrap;
+}
+
+.attachments-section {
+    border-top: 1px solid #e9ecef;
+    padding-top: 1.5rem;
+}
+
+.attachments-title {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #212529;
+    margin: 0 0 1rem 0;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.attachment-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.attachment-item {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: box-shadow 0.2s;
+}
+
+.attachment-item:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.attachment-visual {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.audio-icon {
+    width: 40px;
+    height: 40px;
+    background: #212529;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.play-button {
+    width: 16px;
+    height: 16px;
+    background: #ffffff;
+    border-radius: 50%;
+    position: relative;
+}
+
+.play-button::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-40%, -50%);
+    width: 0;
+    height: 0;
+    border-left: 6px solid #212529;
+    border-top: 4px solid transparent;
+    border-bottom: 4px solid transparent;
+}
+
+.waveform {
+    width: 60px;
+    height: 20px;
+    background: repeating-linear-gradient(
+        90deg,
+        #ffffff 0px,
+        #ffffff 2px,
+        #212529 2px,
+        #212529 4px,
+        #ffffff 4px,
+        #ffffff 8px,
+        #212529 8px,
+        #212529 10px,
+        #ffffff 10px,
+        #ffffff 12px,
+        #212529 12px,
+        #212529 14px,
+        #ffffff 14px,
+        #ffffff 18px,
+        #212529 18px,
+        #212529 20px,
+        #ffffff 20px,
+        #ffffff 24px,
+        #212529 24px,
+        #212529 26px,
+        #ffffff 26px,
+        #ffffff 30px,
+        #212529 30px,
+        #212529 32px,
+        #ffffff 32px,
+        #ffffff 36px,
+        #212529 36px,
+        #212529 38px,
+        #ffffff 38px,
+        #ffffff 42px,
+        #212529 42px,
+        #212529 44px,
+        #ffffff 44px,
+        #ffffff 48px,
+        #212529 48px,
+        #212529 50px,
+        #ffffff 50px,
+        #ffffff 54px,
+        #212529 54px,
+        #212529 56px,
+        #ffffff 56px,
+        #ffffff 60px
+    );
+}
+
+.attachment-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.file-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #212529;
+    margin-bottom: 0.25rem;
+    word-break: break-all;
+}
+
+.file-size {
+    font-size: 0.8rem;
+    color: #6b7280;
+}
+
+.download-btn {
+    width: 36px;
+    height: 36px;
+    background: #10b981;
+    color: #ffffff;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    transition: background-color 0.2s, transform 0.1s;
+    flex-shrink: 0;
+}
+
+.download-btn:hover {
+    background: #059669;
+    transform: translateY(-1px);
+}
+
+.download-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+@media (max-width: 768px) {
+    .attachment-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .attachment-item {
+        flex-direction: column;
+        text-align: center;
+        gap: 0.75rem;
+    }
+    
+    .attachment-visual {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+}
+
+/* Dispute Card Styles */
+.dispute-card {
+    background: #ffffff;
+    border-radius: 12px;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    border-left: 4px solid #f59e0b;
+}
+
+.dispute-header {
+    background: #fef3c7;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #fbbf24;
+}
+
+.dispute-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #92400e;
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.dispute-content {
+    padding: 1.5rem;
+}
+
+.dispute-info {
+    margin-bottom: 1.5rem;
+}
+
+.dispute-type,
+.dispute-detail {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.dispute-type:last-child,
+.dispute-detail:last-child {
+    border-bottom: none;
+}
+
+.dispute-label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #374151;
+    flex: 0 0 40%;
+    margin-right: 1rem;
+}
+
+.dispute-value {
+    font-size: 0.9rem;
+    color: #6b7280;
+    flex: 1;
+    text-align: right;
+    word-break: break-word;
+}
+
+.dispute-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.dispute-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    min-width: 140px;
+    justify-content: center;
+}
+
+.dispute-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.approve-btn {
+    background: #10b981;
+    color: #ffffff;
+}
+
+.approve-btn:hover {
+    background: #059669;
+}
+
+.reject-btn {
+    background: #ef4444;
+    color: #ffffff;
+}
+
+.reject-btn:hover {
+    background: #dc2626;
+}
+
+.btn-icon {
+    font-size: 1rem;
+    font-weight: bold;
+}
+
+@media (max-width: 768px) {
+    .dispute-type,
+    .dispute-detail {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .dispute-label {
+        flex: none;
+        margin-right: 0;
+    }
+    
+    .dispute-value {
+        text-align: left;
+    }
+    
+    .dispute-actions {
+        flex-direction: column;
+    }
+    
+    .dispute-btn {
+        width: 100%;
+    }
+}
 </style>
+
+<script>
+// Deliver Order Modal Functions
+function openDeliverModal() {
+    document.getElementById('deliverModal').style.display = 'block';
+    document.body.style.overflow = 'hidden'; // Prevent background scrolling
+}
+
+function closeDeliverModal() {
+    document.getElementById('deliverModal').style.display = 'none';
+    document.body.style.overflow = 'auto'; // Restore scrolling
+    // Reset form
+    document.getElementById('deliverForm').reset();
+}
+
+// Close modal when clicking outside of it
+window.onclick = function(event) {
+    const modal = document.getElementById('deliverModal');
+    if (event.target === modal) {
+        closeDeliverModal();
+    }
+}
+
+// Handle form submission
+document.getElementById('deliverForm').addEventListener('submit', function(e) {
+    const message = document.getElementById('response_text').value.trim();
+    const file = document.getElementById('file').files[0];
+    
+    if (!message) {
+        e.preventDefault();
+        alert('Please enter a delivery message.');
+        return;
+    }
+    
+    if (!file) {
+        e.preventDefault();
+        alert('Please select a file to upload.');
+        return;
+    }
+    
+    // Show loading state
+    const submitBtn = this.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = 'Delivering...';
+    submitBtn.disabled = true;
+    
+    // Re-enable button after 3 seconds in case of error
+    setTimeout(() => {
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+    }, 3000);
+});
+</script>
 {% endblock %}

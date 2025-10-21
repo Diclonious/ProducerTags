@@ -38,3 +38,4 @@ class Order(Base):
     user = relationship("User", back_populates="orders")
     package = relationship("Package")
     tags = relationship("Tag", back_populates="order")
+    deliveries = relationship("Delivery", back_populates="order", cascade="all, delete-orphan")

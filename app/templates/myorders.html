@@ -17,6 +17,40 @@
 .tab{border:1px solid var(--line);border-radius:999px;padding:.35rem .8rem;color:var(--muted);cursor:pointer;transition:all 0.2s}
 .tab.active{background:var(--brand);color:var(--brand-ink);border-color:rgba(226,251,82,0.35)}
 .tab:hover:not(.active){background:rgba(255,255,255,0.05)}
+
+/* Order Cards - Matching Admin Style */
+.orders-grid{display:grid;grid-template-columns:1fr;gap:1rem}
+.order-card{background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;padding:1.5rem;display:flex;align-items:center;gap:2rem;box-shadow:0 1px 3px rgba(0,0,0,0.1);transition:box-shadow 0.2s}
+.order-card:hover{box-shadow:0 4px 6px rgba(0,0,0,0.1)}
+.order-user{display:flex;align-items:center;gap:0.75rem;min-width:140px}
+.user-avatar{width:36px;height:36px;border-radius:50%;object-fit:cover;background:#e5e7eb;display:flex;align-items:center;justify-content:center;color:#6b7280;font-weight:600;font-size:0.875rem;flex-shrink:0}
+.username{font-weight:500;color:#111827;font-size:0.9rem}
+.order-price{font-weight:600;color:#111827;min-width:60px;text-align:center;font-size:1rem}
+.delivery-time{display:flex;align-items:center;gap:0.5rem;min-width:120px;font-size:0.9rem}
+.delivery-time.late{color:#dc2626}
+.delivery-time.normal{color:#374151}
+.clock-icon{width:16px;height:16px}
+.order-status{min-width:120px;text-align:center}
+.status-badge{padding:0.4rem 1rem;border-radius:8px;font-weight:600;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.05em}
+.status-badge.in-revision{background:#fef2f2;color:#dc2626}
+.status-badge.in-progress{background:#eff6ff;color:#2563eb}
+.status-badge.delivered{background:#f0fdf4;color:#16a34a}
+.status-badge.completed{background:#f9fafb;color:#374151}
+.status-badge.late{background:#fef2f2;color:#dc2626}
+.status-badge.cancelled{background:#fef2f2;color:#dc2626}
+.status-badge.in-dispute{background:#faf5ff;color:#9333ea}
+.view-btn{color:#16a34a;text-decoration:none;font-weight:500;font-size:0.9rem;padding:0.5rem 1rem;border-radius:6px;transition:background-color 0.2s;min-width:80px;text-align:center}
+.view-btn:hover{background-color:#f0fdf4}
+
+/* Legacy styles for backward compatibility */
+.status.active { background: #f59e0b; }
+.status.revision { background: #3b82f6; }
+.status.delivered { background: #10b981; }
+.status.late { background: #ef4444; box-shadow: 0 0 0 2px rgba(239,68,68,0.25) inset; }
+.status.pending { background: #6b7280; }
+.status.completed { background: #10b981; }
+.status.cancelled { background: #ef4444; }
+.status.in-dispute { background: #a855f7; }
 </style>
 
 <div class="layout">
@@ -49,197 +83,103 @@
   {% endfor %}
 </div>
 
-<h3 class="section-title">Active orders</h3>
+<h3 class="section-title">All Orders</h3>
 <div class="orders-grid" id="ordersGrid">
     {% for order in orders %}
     <div class="order-card" data-status="{{ order.status }}" data-text="{{ order.package.name if order.package else '' }} #{{ order.id }}">
-        <div class="order-card-header">
-            <div style="display:flex;align-items:center;gap:.6rem">
-              {% if order.user and order.user.avatar %}
-                <img src="{{ url_for('uploads', path=order.user.avatar) }}" alt="Avatar" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:1px solid rgba(255,255,255,.25)">
-              {% endif %}
-              <h3>{{ order.package.name }}</h3>
-            </div>
-            <span class="status {% if order.status == 'Late' %}late{% elif order.status == 'Active' %}active{% elif order.status == 'Delivered' %}delivered{% elif order.status == 'Revision' %}revision{% else %}pending{% endif %}">
-                {{ order.status }}
-            </span>
-        </div>
-
-        {% if order.tags %}
-        <div class="tags">
-            {% for tag in order.tags %}
-            <span class="tag">{{ tag.name }} | {{ tag.mood }}</span>
-            {% endfor %}
-        </div>
-        {% endif %}
-
-        <p class="details"><strong>Details:</strong> {{ order.details or "N/A" }}</p>
-
-        {% if order.status in ["Active", "Delivered"] %}
-        <p class="due"><strong>Due in:</strong> <span id="timer-{{ order.id }}">Calculating...</span></p>
-        <script>
-            (function() {
-                var countdownDate = new Date("{{ order.due_date.isoformat() }}").getTime();
-                var timerId = "timer-{{ order.id }}";
-                function updateTimer() {
-                    var now = new Date().getTime();
-                    var distance = countdownDate - now;
-                    if (distance < 0) {
-                        document.getElementById(timerId).innerHTML = "Order is due!";
-                        clearInterval(interval);
-                        return;
-                    }
-                    var days = Math.floor(distance / (1000 * 60 * 60 * 24));
-                    var hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                    var minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-                    var seconds = Math.floor((distance % (1000 * 60)) / 1000);
-                    document.getElementById(timerId).innerHTML =
-                        days + "d " + hours + "h " + minutes + "m " + seconds + "s";
-                }
-                updateTimer();
-                var interval = setInterval(updateTimer, 1000);
-            })();
-        </script>
-        {% endif %}
-
-        <div class="order-actions">
-            {% if order.status == "Delivered" %}
-            <form action="/order/{{ order.id }}/complete" method="post" style="flex:1">
-                <button type="submit" class="btn btn-primary">Mark as Complete</button>
-            </form>
+        <!-- Package Info -->
+        <div class="order-user">
+            {% if order.user and order.user.avatar %}
+                <img class="user-avatar" src="{{ url_for('uploads', path=order.user.avatar) }}" alt="{{ order.user.username }}">
+            {% else %}
+                <div class="user-avatar">{{ order.user.username[0]|upper if order.user else 'U' }}</div>
             {% endif %}
-            <a href="/order/{{ order.id }}" class="btn btn-secondary">View Details</a>
+            <span class="username">{{ order.package.name if order.package else 'Package' }}</span>
         </div>
+        
+        <!-- Price -->
+        <div class="order-price">${{ order.package.price if order.package else 'N/A' }}</div>
+        
+        <!-- Delivery Time (only show for Active, Delivered, Late orders) -->
+        {% if order.status in ['Active', 'Delivered', 'Late'] %}
+        <div class="delivery-time {% if order.status == 'Late' %}late{% else %}normal{% endif %}">
+            <svg class="clock-icon" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path>
+            </svg>
+            {% if order.status == 'Late' %}
+                Late
+            {% elif order.due_date %}
+                <span class="countdown" data-due="{{ order.due_date.isoformat() }}"></span>
+            {% else %}
+                N/A
+            {% endif %}
+        </div>
+        {% else %}
+        <!-- Empty space for orders without delivery time -->
+        <div class="delivery-time" style="visibility: hidden;">
+            <svg class="clock-icon" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path>
+            </svg>
+            N/A
+        </div>
+        {% endif %}
+        
+        <!-- Status -->
+        <div class="order-status">
+            {% if order.status == 'Active' %}
+                <span class="status-badge in-progress">IN PROGRESS</span>
+            {% elif order.status == 'Revision' %}
+                <span class="status-badge in-revision">IN REVISION</span>
+            {% elif order.status == 'Delivered' %}
+                <span class="status-badge delivered">DELIVERED</span>
+            {% elif order.status == 'Completed' %}
+                <span class="status-badge completed">COMPLETED</span>
+            {% elif order.status == 'Late' %}
+                <span class="status-badge late">LATE</span>
+            {% elif order.status == 'Cancelled' %}
+                <span class="status-badge cancelled">CANCELLED</span>
+            {% elif order.status == 'In dispute' %}
+                <span class="status-badge in-dispute">IN DISPUTE</span>
+            {% else %}
+                <span class="status-badge">{{ order.status }}</span>
+            {% endif %}
+        </div>
+        
+        <!-- View Button -->
+        <a href="/order/{{ order.id }}" class="view-btn">View</a>
     </div>
     {% endfor %}
     </div>
   </section>
 </div>
 
-<style>
-.page-title {
-    font-size: 1.8rem;
-    margin-bottom: 1.5rem;
-    color: #fff;
-}
-
-.orders-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 1.5rem;
-}
-
-.order-card {
-    background: #1f2937;
-    border-radius: 12px;
-    padding: 1.25rem;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.order-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
-}
-
-.order-card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.75rem;
-}
-
-.status {
-    padding: 0.25rem 0.6rem;
-    border-radius: 8px;
-    font-size: 0.85rem;
-    font-weight: 500;
-    color: #fff;
-}
-
-.status.active { background: #f59e0b; }
-.status.revision { background: #3b82f6; }
-.status.delivered { background: #10b981; }
-.status.late { background: #ef4444; box-shadow: 0 0 0 2px rgba(239,68,68,0.25) inset; }
-.status.pending { background: #6b7280; }
-.status.completed { background: #10b981; }
-.status.cancelled { background: #ef4444; }
-.status.in-dispute { background: #a855f7; }
-
-.tags {
-    margin-bottom: 0.75rem;
-}
-
-.tag {
-    display: inline-block;
-    background: #4b5563;
-    padding: 0.25rem 0.5rem;
-    border-radius: 6px;
-    margin: 2px 2px 4px 0;
-    font-size: 0.8rem;
-}
-
-.details, .due {
-    font-size: 0.9rem;
-    margin-bottom: 0.75rem;
-}
-
-.order-actions {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-}
-
-.btn {
-    padding: 0.5rem 0.9rem;
-    border-radius: 8px;
-    font-weight: 500;
-    text-decoration: none;
-    text-align: center;
-    cursor: pointer;
-}
-
-.btn-primary { background: #22d3ee; color: #0f172a; border: none; }
-.btn-primary:hover { background: #06b6d4; }
-.btn-secondary { background: #111827; color: #e5e7eb; border: 1px solid #374151; }
-.btn-secondary:hover { background: #1f2937; }
-</style>
-
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Tab filtering functionality
     const tabs = document.querySelectorAll('.tab');
     const ordersGrid = document.getElementById('ordersGrid');
-    const sectionTitle = document.querySelector('.section-title');
+    const orderCards = document.querySelectorAll('.order-card');
 
+    // Function to filter orders based on status
     function filterOrders(status) {
-        const orders = document.querySelectorAll('.order-card');
-        let visibleCount = 0;
-
-        orders.forEach(order => {
-            const orderStatus = order.dataset.status;
-            let shouldShow = false;
+        orderCards.forEach(card => {
+            const cardStatus = card.dataset.status;
+            const shouldShow = (status === 'Active' && (cardStatus === 'Active' || cardStatus === 'Delivered')) ||
+                             (status === 'Revision' && cardStatus === 'Revision') ||
+                             (status === 'Late' && cardStatus === 'Late') ||
+                             (status === 'Completed' && cardStatus === 'Completed') ||
+                             (status === 'Cancelled' && cardStatus === 'Cancelled') ||
+                             (status === 'In Dispute' && cardStatus === 'In dispute');
             
-            if (status === 'All') {
-                shouldShow = true;
-            } else if (status === 'Active') {
-                // Show both Active and Delivered orders in Active tab
-                shouldShow = orderStatus === 'Active' || orderStatus === 'Delivered';
-            } else {
-                shouldShow = orderStatus === status;
-            }
-            
-            if (shouldShow) {
-                order.style.display = 'block';
-                visibleCount++;
-            } else {
-                order.style.display = 'none';
-            }
+            card.style.display = shouldShow ? 'flex' : 'none';
         });
+    }
 
-        // Update section title
-        sectionTitle.textContent = status === 'All' ? 'All orders' : status.toLowerCase() + ' orders';
+    // Function to show all orders
+    function showAllOrders() {
+        orderCards.forEach(card => {
+            card.style.display = 'flex';
+        });
     }
 
     tabs.forEach(tab => {
@@ -249,14 +189,41 @@ document.addEventListener('DOMContentLoaded', function() {
             // Add active class to clicked tab
             this.classList.add('active');
             
-            // Filter orders
             const status = this.dataset.status;
             filterOrders(status);
         });
     });
 
-    // Initialize with first tab (Active)
-    filterOrders('Active');
+    // Show all orders by default on page load
+    showAllOrders();
+
+    // Countdown timer functionality
+    function updateCountdowns() {
+        const countdownElements = document.querySelectorAll('.countdown');
+        countdownElements.forEach(element => {
+            const dueDate = new Date(element.dataset.due);
+            const now = new Date();
+            const diff = dueDate - now;
+            
+            if (diff < 0) {
+                element.textContent = 'Overdue';
+                element.style.color = '#dc2626';
+                return;
+            }
+            
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+            
+            element.textContent = `${days}d ${hours}h ${minutes}m ${seconds}s`;
+        });
+    }
+
+    // Update countdowns every second
+    updateCountdowns();
+    setInterval(updateCountdowns, 1000);
 });
 </script>
+
 {% endblock %}

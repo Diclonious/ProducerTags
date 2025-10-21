@@ -27,7 +27,7 @@
         <div class="name">{{ request.session.get('username','User') }}</div>
         <div class="handle">@{{ request.session.get('username','user')|lower }}</div>
         <div class="actions">
-          <a href="/profile" style="display:block;text-align:center;border:1px solid var(--line);border-radius:10px;padding:.45rem .75rem;text-decoration:none;color:#e5e7eb">View profile</a>
+          <a href="/profile" style="display:block;text-align:center;border:1px solid var(--line);border-radius:10px;padding:.45rem .75rem;text-decoration:none;color:#e5e7eb;width:100%;box-sizing:border-box">View profile</a>
         </div>
       </div>
     </div>
@@ -54,21 +54,28 @@
 .tab{border:1px solid var(--line);border-radius:999px;padding:.35rem .8rem;color:var(--muted);cursor:pointer}
 .tab.active{background:var(--brand);color:var(--brand-ink);border-color:rgba(226,251,82,0.35)}
 .grid{display:grid;grid-template-columns:1fr;gap:1rem}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:1rem;display:flex;flex-direction:column;gap:.75rem}
-.row{display:flex;gap:.75rem;align-items:center}
-.avatar{width:48px;height:48px;border-radius:50%;object-fit:cover;border:1px solid rgba(255,255,255,.25);background:#0b1020;display:grid;place-items:center;color:#64748b;font-weight:800}
-.meta{color:var(--muted);font-size:.9rem}
-.status{padding:.25rem .6rem;border-radius:8px;color:#0f172a;font-weight:700}
-.status.active{background:#93c5fd}
-.status.revision{background:#fcd34d}
-.status.delivered{background:#6ee7b7}
-.status.late{background:#fca5a5}
-.status.completed{background:#cbd5e1}
-.status.in-dispute{background:#c084fc}
-.status.cancelled{background:#fca5a5}
-.actions{display:flex;gap:.5rem;margin-left:auto}
-.btn{display:inline-flex;align-items:center;gap:.35rem;padding:.45rem .7rem;border-radius:10px;border:1px solid var(--line);color:#e5e7eb;text-decoration:none}
-.btn:hover{background:rgba(255,255,255,0.06)}
+.order-card{background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;padding:1.5rem;display:flex;align-items:center;gap:2rem;box-shadow:0 1px 3px rgba(0,0,0,0.1);transition:box-shadow 0.2s}
+.order-card:hover{box-shadow:0 4px 6px rgba(0,0,0,0.1)}
+.order-thumbnail{width:60px;height:40px;border-radius:6px;object-fit:cover;background:#f3f4f6;display:flex;align-items:center;justify-content:center;color:#6b7280;font-size:0.75rem;flex-shrink:0}
+.order-user{display:flex;align-items:center;gap:0.75rem;min-width:140px}
+.user-avatar{width:36px;height:36px;border-radius:50%;object-fit:cover;background:#e5e7eb;display:flex;align-items:center;justify-content:center;color:#6b7280;font-weight:600;font-size:0.875rem;flex-shrink:0}
+.username{font-weight:500;color:#111827;font-size:0.9rem}
+.order-price{font-weight:600;color:#111827;min-width:60px;text-align:center;font-size:1rem}
+.delivery-time{display:flex;align-items:center;gap:0.5rem;min-width:120px;font-size:0.9rem}
+.delivery-time.late{color:#dc2626}
+.delivery-time.normal{color:#374151}
+.clock-icon{width:16px;height:16px}
+.order-status{min-width:120px;text-align:center}
+.status-badge{padding:0.4rem 1rem;border-radius:8px;font-weight:600;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.05em}
+.status-badge.in-revision{background:#fef2f2;color:#dc2626}
+.status-badge.in-progress{background:#eff6ff;color:#2563eb}
+.status-badge.delivered{background:#f0fdf4;color:#16a34a}
+.status-badge.completed{background:#f9fafb;color:#374151}
+.status-badge.late{background:#fef2f2;color:#dc2626}
+.status-badge.cancelled{background:#fef2f2;color:#dc2626}
+.status-badge.in-dispute{background:#faf5ff;color:#9333ea}
+.view-btn{color:#16a34a;text-decoration:none;font-weight:500;font-size:0.9rem;padding:0.5rem 1rem;border-radius:6px;transition:background-color 0.2s;min-width:80px;text-align:center}
+.view-btn:hover{background-color:#f0fdf4}
 .empty{color:var(--muted)}
 </style>
 
@@ -85,25 +92,67 @@
 <h3 class="section-title">Active orders</h3>
 <div class="grid" id="ordersGrid">
   {% for order in orders %}
-  <div class="card" data-status="{{ order.status }}" data-text="{{ order.user.username }} {{ order.package.name if order.package else '' }} #{{ order.id }}">
-    <div class="row">
+  <div class="order-card" data-status="{{ order.status }}" data-text="{{ order.user.username }} {{ order.package.name if order.package else '' }} #{{ order.id }}">
+    <!-- User Info -->
+    <div class="order-user">
       {% if order.user.avatar %}
-        <img class="avatar" src="{{ url_for('uploads', path=order.user.avatar) }}" alt="{{ order.user.username }}">
+        <img class="user-avatar" src="{{ url_for('uploads', path=order.user.avatar) }}" alt="{{ order.user.username }}">
       {% else %}
-        <div class="avatar">{{ order.user.username[0]|upper }}</div>
+        <div class="user-avatar">{{ order.user.username[0]|upper }}</div>
       {% endif %}
-      <div>
-        <div style="font-weight:800">{{ order.user.username }}</div>
-        <div class="meta">Order #{{ order.id }} • {{ order.package.name if order.package else 'Package' }} • ${{ order.package.price if order.package else 'N/A' }}</div>
-      </div>
-      <div class="actions">
-        <a class="btn" href="/order/{{ order.id }}">View</a>
-      </div>
+      <span class="username">{{ order.user.username }}</span>
     </div>
-    <div class="row" style="justify-content:space-between">
-      <div class="meta">{% if order.status == 'Active' and order.due_date %}⏱ <span class="countdown" data-due="{{ order.due_date.isoformat() }}"></span>{% else %}&nbsp;{% endif %}</div>
-      <div class="status {{ order.status|lower }}">{{ order.status }}</div>
+    
+    <!-- Price -->
+    <div class="order-price">${{ order.package.price if order.package else 'N/A' }}</div>
+    
+    <!-- Delivery Time (only show for Active, Delivered, Late orders) -->
+    {% if order.status in ['Active', 'Delivered', 'Late'] %}
+    <div class="delivery-time {% if order.status == 'Late' %}late{% else %}normal{% endif %}">
+      <svg class="clock-icon" fill="currentColor" viewBox="0 0 20 20">
+        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path>
+      </svg>
+      {% if order.status == 'Late' %}
+        Late
+      {% elif order.due_date %}
+        <span class="countdown" data-due="{{ order.due_date.isoformat() }}"></span>
+      {% else %}
+        N/A
+      {% endif %}
     </div>
+    {% else %}
+    <!-- Empty space for orders without delivery time -->
+    <div class="delivery-time" style="visibility: hidden;">
+      <svg class="clock-icon" fill="currentColor" viewBox="0 0 20 20">
+        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path>
+      </svg>
+      N/A
+    </div>
+    {% endif %}
+    
+    <!-- Status -->
+    <div class="order-status">
+      {% if order.status == 'Active' %}
+        <span class="status-badge in-progress">IN PROGRESS</span>
+      {% elif order.status == 'Revision' %}
+        <span class="status-badge in-revision">IN REVISION</span>
+      {% elif order.status == 'Delivered' %}
+        <span class="status-badge delivered">DELIVERED</span>
+      {% elif order.status == 'Completed' %}
+        <span class="status-badge completed">COMPLETED</span>
+      {% elif order.status == 'Late' %}
+        <span class="status-badge late">LATE</span>
+      {% elif order.status == 'Cancelled' %}
+        <span class="status-badge cancelled">CANCELLED</span>
+      {% elif order.status == 'In dispute' %}
+        <span class="status-badge in-dispute">IN DISPUTE</span>
+      {% else %}
+        <span class="status-badge">{{ order.status }}</span>
+      {% endif %}
+    </div>
+    
+    <!-- View Button -->
+    <a href="/order/{{ order.id }}" class="view-btn">View</a>
   </div>
   {% else %}
   <p class="empty">No orders yet.</p>
@@ -126,7 +175,7 @@ const grid=document.getElementById('ordersGrid');
 function applyFilters(){
   const activeTab=document.querySelector('.tab.active');
   const status=activeTab?activeTab.dataset.status:'All';
-  grid.querySelectorAll('.card').forEach(card=>{
+  grid.querySelectorAll('.order-card').forEach(card=>{
     const cardStatus = card.dataset.status;
     let matchStatus = false;
     

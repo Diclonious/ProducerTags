@@ -77,7 +77,6 @@
             <a class="link" href="#" title="Notifications">🔔</a>
             <a class="link" href="#" title="Inbox">✉️</a>
             <div class="menu" id="profileMenu">
-              {% if request.session.get('is_admin') %}<span class="link" style="pointer-events:none;opacity:.85;margin-right:.5rem">€{{ '%.2f'|format(request.session.get('admin_month_earnings', 0.0)) }}</span>{% endif %}
               <button class="menu-btn" onclick="toggleMenu('profileMenu')" style="position:relative;border:none;background:none;padding:0">
                 {% if request.session.get('avatar_url') %}
                   <img src="{{ request.session.get('avatar_url') }}" alt="Avatar" class="avatar-mini" style="border:none" />
@@ -86,6 +85,7 @@
                 {% endif %}
                 <span style="position:absolute;right:2px;bottom:2px;width:8px;height:8px;border-radius:50%;background:#22c55e;border:2px solid rgba(11,15,25,.8)"></span>
               </button>
+              {% if request.session.get('is_admin') %}<span class="link" style="pointer-events:none;opacity:.85;margin-left:.5rem">€{{ '%.2f'|format(request.session.get('admin_month_earnings', 0.0)) }}</span>{% endif %}
               <div class="menu-items" style="min-width:260px">
                 <div style="padding:.65rem;border-bottom:1px solid var(--line);display:flex;gap:.6rem;align-items:center">
                   {% if request.session.get('avatar_url') %}

@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Request, Form, HTTPException
 from fastapi.templating import Jinja2Templates
+from fastapi.responses import FileResponse
 
 from starlette.middleware.sessions import SessionMiddleware
 from fastapi import FastAPI, Request, HTTPException, Depends
@@ -17,6 +18,7 @@ from app.domain.Package import Package
 from app.domain.User import User
 from app.domain.Order import Order
 from app.domain.Tag import Tag
+from app.domain.Delivery import Delivery
 from fastapi.staticfiles import StaticFiles
 
 app = FastAPI()
@@ -43,6 +45,8 @@ def startup_event():
     from app.domain.Order import Order
     from app.domain.Package import Package
     from app.domain.Tag import Tag
+    from app.domain.Delivery import Delivery
+    from app.domain.OrderEvent import OrderEvent
     
     db = SessionLocal()
     
@@ -515,7 +519,7 @@ async def view_order(request: Request, order_id: int):
         # Fetch the order with relationships
         order = (
             db.query(Order)
-            .options(joinedload(Order.tags), joinedload(Order.user), joinedload(Order.package))
+            .options(joinedload(Order.tags), joinedload(Order.user), joinedload(Order.package), joinedload(Order.deliveries))
             .filter(Order.id == order_id)
             .first()
         )
@@ -594,10 +598,24 @@ async def admin_deliver_order(
             content = await file.read()
             f.write(content)
 
-        # Update order
+        # Get the next delivery number for this order
+        delivery_count = db.query(Delivery).filter(Delivery.order_id == order_id).count()
+        delivery_number = delivery_count + 1
+
+        # Create a new delivery record
+        delivery = Delivery(
+            order_id=order_id,
+            delivery_number=delivery_number,
+            response_text=response_text,
+            delivery_file=file.filename,
+            delivered_at=datetime.utcnow()
+        )
+        db.add(delivery)
+
+        # Update order status
         order.status = "Delivered"
-        order.response = response_text
-        order.delivery_file = file.filename
+        order.response = response_text  # Keep for backward compatibility
+        order.delivery_file = file.filename  # Keep for backward compatibility
         db.commit()
     finally:
         db.close()
@@ -644,6 +662,80 @@ async def user_approve_delivery(request: Request, order_id: int):
     finally:
         db.close()
     return RedirectResponse(url=f"/order/{order_id}", status_code=HTTP_302_FOUND)
+
+
+@app.get("/order/{order_id}/download-delivered-file/{delivery_id}")
+async def download_delivered_file(request: Request, order_id: int, delivery_id: int):
+    user_id = request.session.get("user_id")
+    is_admin = request.session.get("is_admin")
+    
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    db = SessionLocal()
+    try:
+        order = db.query(Order).filter(Order.id == order_id).first()
+        if not order:
+            raise HTTPException(status_code=404, detail="Order not found")
+
+        # Check if the current user is the owner of the order or an admin
+        if order.user_id != user_id and not is_admin:
+            raise HTTPException(status_code=403, detail="Not authorized to download this file")
+
+        delivery = db.query(Delivery).filter(
+            Delivery.id == delivery_id, 
+            Delivery.order_id == order_id
+        ).first()
+        
+        if not delivery or not delivery.delivery_file:
+            raise HTTPException(status_code=404, detail="Delivery file not found")
+
+        file_path = BASE_DIR / "uploads" / delivery.delivery_file
+        if not file_path.exists():
+            raise HTTPException(status_code=404, detail="Delivered file not found on server")
+
+        return FileResponse(
+            path=str(file_path), 
+            filename=delivery.delivery_file, 
+            media_type="application/octet-stream"
+        )
+    finally:
+        db.close()
+
+
+@app.get("/order/{order_id}/download-delivered-file/legacy")
+async def download_legacy_delivered_file(request: Request, order_id: int):
+    """Handle downloads for old deliveries stored directly on the order"""
+    user_id = request.session.get("user_id")
+    is_admin = request.session.get("is_admin")
+    
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    db = SessionLocal()
+    try:
+        order = db.query(Order).filter(Order.id == order_id).first()
+        if not order:
+            raise HTTPException(status_code=404, detail="Order not found")
+
+        # Check if the current user is the owner of the order or an admin
+        if order.user_id != user_id and not is_admin:
+            raise HTTPException(status_code=403, detail="Not authorized to download this file")
+
+        if not order.delivery_file:
+            raise HTTPException(status_code=404, detail="No file delivered for this order")
+
+        file_path = BASE_DIR / "uploads" / order.delivery_file
+        if not file_path.exists():
+            raise HTTPException(status_code=404, detail="Delivered file not found on server")
+
+        return FileResponse(
+            path=str(file_path), 
+            filename=order.delivery_file, 
+            media_type="application/octet-stream"
+        )
+    finally:
+        db.close()
 
 
 @app.get("/order/{order_id}/review")
