@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}Analytics{% endblock %}
+
+{% block content %}
+<style>
+.head{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem}
+.title{font-weight:900;color:#fff;margin:0;font-size:1.6rem}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin-bottom:1.25rem}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:1rem}
+.kpi .label{color:var(--muted);font-size:.85rem}
+.kpi .value{font-weight:900;font-size:1.5rem}
+.chart{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:1rem;margin-bottom:1rem}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:1rem;display:flex;gap:.65rem}
+.avatar{width:44px;height:44px;border-radius:50%;object-fit:cover;border:1px solid rgba(255,255,255,.25);background:#0b1020}
+.user{font-weight:800;color:#e5e7eb}
+.rating{color:#fbbf24}
+.pkg{color:#cbd5e1;font-weight:600}
+.meta{color:#94a3b8;font-size:.85rem}
+.comment{color:#9ca3af;font-size:.9rem;margin-top:.35rem}
+</style>
+
+<div class="head">
+  <h2 class="title">Analytics Overview</h2>
+</div>
+
+<div class="kpis">
+  <div class="kpi"><div class="label">Total Orders</div><div class="value">{{ kpis.total }}</div></div>
+  <div class="kpi"><div class="label">Completed</div><div class="value">{{ kpis.completed }}</div></div>
+  <div class="kpi"><div class="label">Delivered</div><div class="value">{{ kpis.delivered }}</div></div>
+  <div class="kpi"><div class="label">Active</div><div class="value">{{ kpis.active }}</div></div>
+  <div class="kpi"><div class="label">Avg Rating</div><div class="value">{{ '%.2f'|format(kpis.avg_rating) }}</div></div>
+  <div class="kpi"><div class="label">Completion Rate</div><div class="value">{{ '%.1f'|format(kpis.completion_rate) }}%</div></div>
+  <div class="kpi"><div class="label">Revenue</div><div class="value">${{ '%.2f'|format(kpis.revenue) }}</div></div>
+</div>
+
+<div class="chart">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">
+    <div class="subtle">Orders & Revenue</div>
+    <form method="get" action="/analytics">
+      <select name="range" onchange="this.form.submit()" style="background:#0b1020;border:1px solid var(--line);color:#e5e7eb;border-radius:8px;padding:.35rem .5rem">
+        <option value="monthly" {% if request.query_params.get('range','monthly')=='monthly' %}selected{% endif %}>Monthly</option>
+        <option value="yearly" {% if request.query_params.get('range')=='yearly' %}selected{% endif %}>Yearly</option>
+      </select>
+    </form>
+  </div>
+  <canvas id="ordersChart" height="110"></canvas>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script>
+    const ctx = document.getElementById('ordersChart').getContext('2d');
+    const labels = {{ chart_labels | tojson }};
+    const revenue = {{ chart_revenue | tojson }};
+    const completed = {{ chart_completed | tojson }};
+    const chart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Revenue (€)',
+          data: revenue,
+          backgroundColor: 'rgba(226,251,82,0.35)',
+          borderColor: '#e2fb52'
+        },{
+          type: 'line',
+          label: 'Completed',
+          data: completed,
+          borderColor: '#60a5fa',
+          backgroundColor: 'transparent',
+          tension: 0.35,
+          yAxisID: 'y1'
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          x: { grid: { color: 'rgba(255,255,255,0.06)' }, ticks: { color: '#9aa4b2' } },
+          y: { grid: { color: 'rgba(255,255,255,0.06)' }, ticks: { color: '#9aa4b2' }, beginAtZero: true },
+          y1: { position: 'right', grid: { display:false }, ticks: { color: '#9aa4b2' }, beginAtZero: true }
+        },
+        plugins: { 
+          legend: { labels: { color: '#e6e9ef' } },
+          tooltip: {
+            callbacks: {
+              title: (items)=> items[0].label,
+              label: (item)=>{
+                if(item.datasetIndex===0){ return `Sales: €${item.formattedValue}`; }
+                if(item.datasetIndex===1){ return `Completed: ${item.formattedValue}`; }
+              }
+            }
+          }
+        }
+      }
+    });
+  </script>
+</div>
+
+<h3 class="title" style="font-size:1.1rem;margin:1rem 0">Recent Reviews</h3>
+<div class="grid">
+  {% for o in recent_reviews %}
+  <div class="card">
+    {% if o.user and o.user.avatar %}
+      <img class="avatar" src="{{ url_for('uploads', path=o.user.avatar) }}" alt="{{ o.user.username }}">
+    {% else %}
+      <div class="avatar" style="display:grid;place-items:center;color:#64748b">{{ o.user.username[0]|upper if o.user else '?' }}</div>
+    {% endif %}
+    <div>
+      <div class="user">{{ o.user.username if o.user else 'User' }}</div>
+      <div class="rating">{% for _ in range(o.review) %}★{% endfor %}{% for _ in range(5 - o.review) %}☆{% endfor %}</div>
+      <div class="pkg">{{ o.package.name if o.package else 'Package' }}</div>
+      <div class="meta">Order #{{ o.id }}</div>
+      {% if o.review_text %}<div class="comment">“{{ o.review_text }}”</div>{% endif %}
+    </div>
+  </div>
+  {% else %}
+  <p class="meta">No recent reviews.</p>
+  {% endfor %}
+</div>
+{% endblock %}
+

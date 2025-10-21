@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}All Reviews{% endblock %}
+
+{% block content %}
+<style>
+.head{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem}
+.title{font-weight:900;color:#fff;margin:0;font-size:1.6rem}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:1rem;display:flex;gap:.65rem}
+.avatar{width:44px;height:44px;border-radius:50%;object-fit:cover;border:1px solid rgba(255,255,255,.25);background:#0b1020}
+.user{font-weight:800;color:#e5e7eb}
+.rating{color:#fbbf24}
+.pkg{color:#cbd5e1;font-weight:600}
+.meta{color:#94a3b8;font-size:.85rem}
+.comment{color:#9ca3af;font-size:.9rem;margin-top:.35rem}
+</style>
+
+<div class="head"><h2 class="title">All Reviews</h2></div>
+<div class="grid">
+  {% for o in orders %}
+  <div class="card">
+    {% if o.user and o.user.avatar %}
+    <img class="avatar" src="{{ url_for('uploads', path=o.user.avatar) }}" alt="{{ o.user.username }}">
+    {% else %}
+    <div class="avatar" style="display:grid;place-items:center;color:#64748b">{{ o.user.username[0]|upper if o.user else '?' }}</div>
+    {% endif %}
+    <div>
+      <div class="user">{{ o.user.username if o.user else 'User' }}</div>
+      <div class="rating">{% for _ in range(o.review) %}★{% endfor %}{% for _ in range(5 - o.review) %}☆{% endfor %}</div>
+      <div class="pkg">{{ o.package.name if o.package else 'Package' }}</div>
+      <div class="meta">Order #{{ o.id }}</div>
+      {% if o.review_text %}<div class="comment">“{{ o.review_text }}”</div>{% endif %}
+    </div>
+  </div>
+  {% else %}
+    <p class="meta">No reviews yet.</p>
+  {% endfor %}
+</div>
+{% endblock %}
+

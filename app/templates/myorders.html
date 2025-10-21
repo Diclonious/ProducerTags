@@ -2,43 +2,196 @@
 {% block title %}My Orders{% endblock %}
 
 {% block content %}
-<h2>My Orders</h2>
-<div class="grid">
-   {% for order in orders %}
-   <div class="card" style="position: relative; padding: 1rem; border: 1px solid #ccc; margin-bottom: 1rem;">
-       <h3>{{ order.package.name }}</h3>
-       <p><strong>Details:</strong> {{ order.details or "N/A" }}</p>
-       <p><strong>Tags:</strong></p>
-       <ul>
-           {% for tag in order.tags %}
-           <li>Tag {{ loop.index }}: {{ tag.name }} | Mood: {{ tag.mood }}</li>
-           {% endfor %}
-       </ul>
-       <p><strong>Due in:</strong> <span id="timer-{{ order.id }}">Calculating...</span></p>
-       <script>
-           (function() {
-               var countdownDate = new Date("{{ order.due_date.isoformat() }}").getTime();
-               var timerId = "timer-{{ order.id }}";
-               function updateTimer() {
-                   var now = new Date().getTime();
-                   var distance = countdownDate - now;
-                   if (distance < 0) {
-                       document.getElementById(timerId).innerHTML = "Order is due!";
-                       clearInterval(interval);
-                       return;
-                   }
-                   var days = Math.floor(distance / (1000 * 60 * 60 * 24));
-                   var hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                   var minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-                   var seconds = Math.floor((distance % (1000 * 60)) / 1000);
-                   document.getElementById(timerId).innerHTML =
-                       days + "d " + hours + "h " + minutes + "m " + seconds + "s";
-               }
-               updateTimer(); // initial call
-               var interval = setInterval(updateTimer, 1000);
-           })();
-       </script>
-   </div>
-   {% endfor %}
+<style>
+.layout{display:grid;grid-template-columns:280px 1fr;gap:1.25rem;align-items:start}
+.sidebar .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:0 8px 28px rgba(0,0,0,0.28);padding:1rem}
+.profile{display:flex;flex-direction:column;align-items:center;text-align:center;gap:.6rem}
+.profile .avatar{width:96px;height:96px;border-radius:50%;object-fit:cover;border:1px solid rgba(255,255,255,.25);background:#0b1020;display:grid;place-items:center;color:#64748b;font-weight:800;font-size:1.4rem}
+.profile .name{font-weight:900;color:#fff}
+.profile .handle{color:var(--muted);font-size:.9rem}
+.profile .actions{display:flex;gap:.5rem;flex-wrap:wrap;justify-content:center}
+.profile .actions a{border:1px solid var(--line);border-radius:10px;padding:.45rem .75rem;text-decoration:none;color:#e5e7eb;display:inline-block;margin:0 auto}
+.profile .actions a:hover{background:rgba(255,255,255,0.06)}
+.section-title{font-weight:900;color:#fff;margin:0 0 .75rem 0}
+</style>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="card">
+      <div class="profile">
+        {% if request.session.get('avatar_url') %}
+          <img class="avatar" src="{{ request.session.get('avatar_url') }}" alt="{{ request.session.get('username') }}">
+        {% else %}
+          <div class="avatar">{{ request.session.get('username','U')[0]|upper }}</div>
+        {% endif %}
+        <div class="name">{{ request.session.get('username','User') }}</div>
+        <div class="handle">@{{ request.session.get('username','user')|lower }}</div>
+        <div class="actions">
+          <a href="/profile">View profile</a>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:1rem;display:flex;justify-content:space-between;align-items:center">
+      <div class="subtle">Spent in {{ month_name }}</div>
+      <div style="font-weight:900">€{{ '%.2f'|format(spent_month or 0.0) }}</div>
+    </div>
+  </aside>
+  <section>
+    <h2 class="section-title">My Orders</h2>
+
+<div class="orders-grid">
+    {% for order in orders %}
+    {% if order.status != "Completed" %}
+    <div class="order-card">
+        <div class="order-card-header">
+            <div style="display:flex;align-items:center;gap:.6rem">
+              {% if order.user and order.user.avatar %}
+                <img src="{{ url_for('uploads', path=order.user.avatar) }}" alt="Avatar" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:1px solid rgba(255,255,255,.25)">
+              {% endif %}
+              <h3>{{ order.package.name }}</h3>
+            </div>
+            <span class="status {% if order.status == 'Late' %}late{% elif order.status == 'Active' %}active{% elif order.status == 'Delivered' %}delivered{% elif order.status == 'Revision' %}revision{% else %}pending{% endif %}">
+                {{ order.status }}
+            </span>
+        </div>
+
+        {% if order.tags %}
+        <div class="tags">
+            {% for tag in order.tags %}
+            <span class="tag">{{ tag.name }} | {{ tag.mood }}</span>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <p class="details"><strong>Details:</strong> {{ order.details or "N/A" }}</p>
+
+        {% if order.status == "Active" %}
+        <p class="due"><strong>Due in:</strong> <span id="timer-{{ order.id }}">Calculating...</span></p>
+        <script>
+            (function() {
+                var countdownDate = new Date("{{ order.due_date.isoformat() }}").getTime();
+                var timerId = "timer-{{ order.id }}";
+                function updateTimer() {
+                    var now = new Date().getTime();
+                    var distance = countdownDate - now;
+                    if (distance < 0) {
+                        document.getElementById(timerId).innerHTML = "Order is due!";
+                        clearInterval(interval);
+                        return;
+                    }
+                    var days = Math.floor(distance / (1000 * 60 * 60 * 24));
+                    var hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    var minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                    var seconds = Math.floor((distance % (1000 * 60)) / 1000);
+                    document.getElementById(timerId).innerHTML =
+                        days + "d " + hours + "h " + minutes + "m " + seconds + "s";
+                }
+                updateTimer();
+                var interval = setInterval(updateTimer, 1000);
+            })();
+        </script>
+        {% endif %}
+
+        <div class="order-actions">
+            {% if order.status == "Delivered" %}
+            <form action="/order/{{ order.id }}/complete" method="post" style="flex:1">
+                <button type="submit" class="btn btn-primary">Mark as Complete</button>
+            </form>
+            {% endif %}
+            <a href="/order/{{ order.id }}" class="btn btn-secondary">View Details</a>
+        </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+    </div>
+  </section>
 </div>
+
+<style>
+.page-title {
+    font-size: 1.8rem;
+    margin-bottom: 1.5rem;
+    color: #fff;
+}
+
+.orders-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+.order-card {
+    background: #1f2937;
+    border-radius: 12px;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.order-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+}
+
+.order-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.status {
+    padding: 0.25rem 0.6rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #fff;
+}
+
+.status.active { background: #f59e0b; }
+.status.revision { background: #3b82f6; }
+.status.late { background: #ef4444; box-shadow: 0 0 0 2px rgba(239,68,68,0.25) inset; }
+.status.delivered { background: #10b981; }
+.status.pending { background: #6b7280; }
+
+.tags {
+    margin-bottom: 0.75rem;
+}
+
+.tag {
+    display: inline-block;
+    background: #4b5563;
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    margin: 2px 2px 4px 0;
+    font-size: 0.8rem;
+}
+
+.details, .due {
+    font-size: 0.9rem;
+    margin-bottom: 0.75rem;
+}
+
+.order-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.btn {
+    padding: 0.5rem 0.9rem;
+    border-radius: 8px;
+    font-weight: 500;
+    text-decoration: none;
+    text-align: center;
+    cursor: pointer;
+}
+
+.btn-primary { background: #22d3ee; color: #0f172a; border: none; }
+.btn-primary:hover { background: #06b6d4; }
+.btn-secondary { background: #111827; color: #e5e7eb; border: 1px solid #374151; }
+.btn-secondary:hover { background: #1f2937; }
+</style>
 {% endblock %}

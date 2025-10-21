@@ -15,6 +15,7 @@ class User(Base):
     email = Column(String(100), unique=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
     is_admin = Column(Boolean, default=False)
+    avatar = Column(String(255), nullable=True)
     orders = relationship("Order", back_populates="user")
 
     def set_password(self, password: str):

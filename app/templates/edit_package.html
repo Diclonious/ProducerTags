@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Edit Package{% endblock %}
+
+{% block content %}
+<style>
+.wrap{display:grid;grid-template-columns:1fr;gap:1rem}
+.card{background:#111827;border:1px solid #1f2937;border-radius:14px;padding:1rem;box-shadow:0 8px 25px rgba(0,0,0,0.25)}
+.title{font-weight:800;color:#fff;margin:0 0 1rem 0}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.form-grid .full{grid-column:1/-1}
+.label{display:block;font-weight:600;color:#e5e7eb;margin-bottom:.35rem}
+.input,.textarea{width:100%;background:#0b1020;border:1px solid #374151;border-radius:10px;color:#fff;padding:.6rem}
+.textarea{min-height:120px;resize:vertical}
+.actions{display:flex;justify-content:flex-end;margin-top:1rem}
+.btn{background:#22d3ee;color:#0f172a;font-weight:800;border:none;border-radius:10px;padding:.6rem 1rem;cursor:pointer}
+.btn:hover{background:#06b6d4}
+@media(max-width:900px){.form-grid{grid-template-columns:1fr}}
+</style>
+
+<div class="wrap">
+  <div class="card">
+    <h2 class="title">Edit Package: {{ package.name }}</h2>
+    <form method="post">
+      <div class="form-grid">
+        <div>
+          <label class="label">Name</label>
+          <input class="input" type="text" name="name" value="{{ package.name }}" required>
+        </div>
+        <div>
+          <label class="label">Price</label>
+          <input class="input" type="number" name="price" step="0.01" value="{{ package.price }}" required>
+        </div>
+        <div>
+          <label class="label">Delivery Days</label>
+          <input class="input" type="number" name="delivery_days" value="{{ package.delivery_days }}" required>
+        </div>
+        <div>
+          <label class="label">Tag Count</label>
+          <input class="input" type="number" name="tag_count" value="{{ package.tag_count }}" required>
+        </div>
+        <div class="full">
+          <label class="label">Description</label>
+          <textarea class="textarea" name="description">{{ package.description }}</textarea>
+        </div>
+      </div>
+      <div class="actions">
+        <button type="submit" class="btn">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

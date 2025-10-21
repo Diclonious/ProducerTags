@@ -3,42 +3,146 @@
 {% block title %}Choose a Package{% endblock %}
 
 {% block content %}
-  <h2>Choose your package</h2>
-  <p class="muted">Pick a package that fits your order. Click "Select" to continue to the order form.</p>
+<h2 class="page-title">Choose Your Package</h2>
+<p class="page-subtitle">Pick a package that fits your order. Click "Select" to continue to the order form.</p>
 
-  <div class="grid" role="list">
-    {# Expect `packages` to be a list of dicts: 
-       [{ "id":1, "name":"Basic", "price":10.0, "delivery_days":1, "tag_count":2, "features":["Simple tag","1 revision"] }, ...]
-    #}
+<div class="packages-grid" role="list">
     {% for p in packages %}
-      <div class="card" role="listitem">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
-          <div>
-            <h3>{{ p.name }}</h3>
-            <div class="meta">{{ p.tag_count }} tag{{ 's' if p.tag_count != 1 }} • {{ p.delivery_days }} day{{ 's' if p.delivery_days != 1 }} delivery</div>
-          </div>
-          <div class="price">${{ "%.2f"|format(p.price) }}</div>
+    <div class="package-card" role="listitem">
+        <div class="package-header">
+            <div>
+                <h3 class="package-name">{{ p.name }}</h3>
+                <div class="package-meta">{{ p.tag_count }} tag{{ 's' if p.tag_count != 1 }} • {{ p.delivery_days }} day{{ 's' if p.delivery_days != 1 }} delivery</div>
+            </div>
+            <div class="package-price">${{ "%.2f"|format(p.price) }}</div>
         </div>
 
-        <p class="muted">{{ p.description if p.description is defined else "" }}</p>
-
-        {% if p.features %}
-          <ul>
-            {% for f in p.features %}
-              <li class="muted">{{ f }}</li>
-            {% endfor %}
-          </ul>
+        {% if p.description is defined and p.description %}
+        <p class="package-desc">{{ p.description }}</p>
         {% endif %}
 
-        <div class="actions">
+        {% if p.features %}
+        <ul class="package-features">
+            {% for f in p.features %}
+            <li>{{ f }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
 
-          <form action="/order/new" method="post" style="margin:0">
-            <input type="hidden" name="package_id" value="{{ p.id }}">
-            <button class="btn" type="submit">Select</button>
-          </form>
-
+        <div class="package-actions">
+            <form action="/order/new" method="post">
+                <input type="hidden" name="package_id" value="{{ p.id }}">
+                <button type="submit" class="btn-select">Select</button>
+            </form>
         </div>
-      </div>
+    </div>
     {% endfor %}
-  </div>
+</div>
+
+<style>
+.page-title {
+    font-size: 1.8rem;
+    margin-bottom: 0.5rem;
+    color: #fff;
+}
+
+.page-subtitle {
+    font-size: 0.95rem;
+    color: #9ca3af;
+    margin-bottom: 1.5rem;
+}
+
+.packages-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+.package-card {
+    background: #1f2937;
+    border-radius: 12px;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.package-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+}
+
+.package-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.package-name {
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 0.25rem;
+}
+
+.package-meta {
+    font-size: 0.85rem;
+    color: #9ca3af;
+}
+
+.package-price {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #10b981;
+}
+
+.package-desc {
+    font-size: 0.9rem;
+    color: #d1d5db;
+    margin-bottom: 0.75rem;
+}
+
+.package-features {
+    list-style: none;
+    padding-left: 0;
+    margin-bottom: 1rem;
+}
+
+.package-features li {
+    font-size: 0.85rem;
+    color: #9ca3af;
+    margin-bottom: 0.35rem;
+    padding-left: 1rem;
+    position: relative;
+}
+
+.package-features li::before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    color: #10b981;
+    font-size: 0.8rem;
+}
+
+.package-actions {
+    margin-top: auto;
+}
+
+.btn-select {
+    width: 100%;
+    background: #3b82f6;
+    color: #fff;
+    font-weight: 500;
+    padding: 0.6rem;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-select:hover {
+    background: #2563eb;
+}
+</style>
 {% endblock %}

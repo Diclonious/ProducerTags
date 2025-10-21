@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Completed Orders{% endblock %}
+
+{% block content %}
+<h2 class="page-title">Completed Orders</h2>
+
+<div class="orders-grid">
+    {% for order in orders %}
+    <div class="order-card">
+        <div class="order-info" style="display:flex;align-items:center;gap:.75rem">
+            {% if order.user and order.user.avatar %}
+              <img src="{{ url_for('uploads', path=order.user.avatar) }}" alt="Avatar" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:1px solid rgba(255,255,255,.25)">
+            {% endif %}
+            <div>
+              <p class="order-id"><strong>Order #{{ order.id }}</strong> - {{ order.package.name if order.package else 'N/A' }}</p>
+              {% if is_admin %}
+              <p class="order-user"><strong>User:</strong> {{ order.user.username }}</p>
+              {% endif %}
+              <p class="order-review"><strong>Review:</strong> {{ order.review if order.review else 'Not submitted yet' }}</p>
+              {% if is_admin and order.review_text %}
+              <p class="order-review-text"><strong>Review Comment:</strong> "{{ order.review_text }}"</p>
+              {% endif %}
+            </div>
+        </div>
+        <a href="/order/{{ order.id }}" class="btn-view">View Order</a>
+    </div>
+    {% else %}
+    <p class="no-orders">No completed orders yet.</p>
+    {% endfor %}
+</div>
+
+<style>
+.page-title {
+    font-size: 1.8rem;
+    margin-bottom: 1.5rem;
+    color: #fff;
+}
+
+.orders-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+}
+
+.order-card {
+    background: #1f2937;
+    padding: 1.25rem;
+    border-radius: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.order-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+}
+
+.order-info p {
+    margin: 0.25rem 0;
+    color: #e5e7eb;
+    font-size: 0.9rem;
+}
+
+.order-id {
+    font-weight: 600;
+}
+
+.order-user, .order-review, .order-review-text {
+    color: #9ca3af;
+}
+
+.btn-view {
+    background: #3b82f6;
+    color: #fff;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: background 0.2s;
+}
+
+.btn-view:hover {
+    background: #2563eb;
+}
+
+.no-orders {
+    color: #9ca3af;
+    font-style: italic;
+}
+</style>
+{% endblock %}

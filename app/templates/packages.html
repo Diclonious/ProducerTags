@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Packages{% endblock %}
+
+{% block content %}
+<style>
+.packages-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem}
+.packages-title{font-weight:800;font-size:1.6rem;color:#fff;margin:0}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1rem}
+.card{background:#111827;border:1px solid #1f2937;border-radius:14px;padding:1rem;box-shadow:0 8px 25px rgba(0,0,0,0.25);display:flex;flex-direction:column;gap:.5rem}
+.name{font-weight:700;color:#fff;margin:0}
+.meta{display:flex;gap:.5rem;flex-wrap:wrap}
+.badge{background:#0b1020;border:1px solid #293241;color:#cbd5e1;border-radius:999px;padding:.25rem .55rem;font-size:.8rem}
+.desc{color:#9ca3af;font-size:.92rem;min-height:2.2em}
+.actions{margin-top:auto;display:flex;justify-content:flex-end}
+.btn{display:inline-block;background:#22d3ee;color:#0f172a;font-weight:700;border:none;border-radius:10px;padding:.5rem .85rem;text-decoration:none}
+.btn:hover{background:#06b6d4}
+</style>
+
+<div class="packages-header">
+  <h2 class="packages-title">Package Details</h2>
+</div>
+
+<div class="grid">
+  {% for pkg in packages %}
+  <div class="card">
+    <h3 class="name">{{ pkg.name }}</h3>
+    <div class="meta">
+      <span class="badge">${{ '%.2f'|format(pkg.price) }}</span>
+      <span class="badge">{{ pkg.delivery_days }} day{{ 's' if pkg.delivery_days != 1 }}</span>
+      <span class="badge">{{ pkg.tag_count }} tags</span>
+    </div>
+    <p class="desc">{{ pkg.description or 'No description provided' }}</p>
+    <div class="actions">
+      <a href="/package/{{ pkg.id }}/edit" class="btn">Edit</a>
+    </div>
+  </div>
+  {% endfor %}
+  {% if not packages %}
+    <div class="card"><span class="desc">No packages found.</span></div>
+  {% endif %}
+  
+</div>
+{% endblock %}

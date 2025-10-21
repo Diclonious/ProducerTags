@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Review Order{% endblock %}
+
+{% block content %}
+<h2 class="page-title">Review Order #{{ order.id }}</h2>
+
+<form action="/order/{{ order.id }}/review" method="post" class="review-form">
+    <div class="form-group">
+        <label for="review_text">Your Review</label>
+        <textarea id="review_text" name="review_text" rows="5" placeholder="Write your review..." required></textarea>
+    </div>
+
+    <div class="form-group">
+        <label for="rating">Rating</label>
+        <select id="rating" name="rating" required>
+            <option value="5">5 - Excellent</option>
+            <option value="4">4 - Good</option>
+            <option value="3">3 - Average</option>
+            <option value="2">2 - Poor</option>
+            <option value="1">1 - Terrible</option>
+        </select>
+    </div>
+
+    <button type="submit" class="btn-submit">Submit Review</button>
+</form>
+
+<style>
+.page-title {
+    font-size: 1.8rem;
+    margin-bottom: 1rem;
+    color: #fff;
+}
+
+.review-form {
+    background: #1f2937;
+    padding: 1.5rem;
+    border-radius: 12px;
+    max-width: 600px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+    color: #e5e7eb;
+}
+
+.form-group textarea,
+.form-group select {
+    padding: 0.5rem;
+    border-radius: 8px;
+    border: 1px solid #374151;
+    background: #111827;
+    color: #fff;
+    font-size: 0.95rem;
+    width: 100%;
+    transition: border 0.2s;
+}
+
+.form-group textarea:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: #3b82f6;
+}
+
+.btn-submit {
+    width: 100%;
+    background: #3b82f6;
+    color: #fff;
+    font-weight: 600;
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-submit:hover {
+    background: #2563eb;
+}
+</style>
+{% endblock %}

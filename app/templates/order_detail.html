@@ -1,18 +1,295 @@
 {% extends "base.html" %}
-{% block title %}Order #{{ order.id }}{% endblock %}
+{% block title %}Order Details{% endblock %}
 
 {% block content %}
-<h2>Order #{{ order.id }}</h2>
-<p><strong>User:</strong> {{ order.user.username }}</p>
-<p><strong>Package ID:</strong> {{ order.package_id }}</p>
-<p><strong>Details:</strong> {{ order.details or "N/A" }}</p>
+<h2 class="page-title">Order #{{ order.id }} - {{ order.user.username }}</h2>
 
-<h3>Tags</h3>
-<ul>
-   {% for tag in order.tags %}
-   <li>Tag {{ loop.index }}: {{ tag.name }} | Mood: {{ tag.mood }}</li>
-   {% endfor %}
-</ul>
+<div class="order-card">
+    <div class="order-info">
+        <p><strong>Status:</strong> <span class="status-badge {{ order.status|lower }}">{{ order.status }}</span></p>
+        <p><strong>Package:</strong> {{ order.package.name if order.package else 'N/A' }}</p>
+        <p><strong>Price:</strong> ${{ order.package.price if order.package else 'N/A' }}</p>
+    </div>
 
-<a href="/myorders" class="text-blue-500 hover:underline">Back to My Orders</a>
+    <!-- Admin Delivery Form -->
+    {% if is_admin and order.status in ['Active', 'Revision'] %}
+    <form action="/order/{{ order.id }}/deliver" method="post" enctype="multipart/form-data" class="form-section">
+        <div class="form-group">
+            <label>Upload Delivery File</label>
+            <input type="file" name="file" required>
+        </div>
+        <div class="form-group">
+            <label>Response / Comment</label>
+            <textarea name="response_text" rows="4" placeholder="Enter your response..." required>{{ order.response or '' }}</textarea>
+        </div>
+        <button type="submit" class="btn-submit green">Submit Delivery</button>
+    </form>
+    {% endif %}
+
+    <!-- Display delivered file & admin message -->
+    {% if order.status in ['Delivered', 'Revision', 'Completed'] %}
+    <div class="form-section delivered-info">
+        {% if file_url %}
+        <p><strong>Delivered File:</strong>
+            <a href="{{ file_url }}" target="_blank" class="file-link">{{ order.delivery_file }}</a>
+        </p>
+        {% if not is_admin and order.status in ['Delivered','Revision','Completed'] %}
+        <p>
+          <a href="{{ file_url }}" download class="btn-download">Download delivery</a>
+        </p>
+        {% endif %}
+        {% endif %}
+        <p><strong>Admin Message:</strong> {{ order.response or "No message provided" }}</p>
+    </div>
+    {% endif %}
+
+    <!-- User Actions -->
+    {% if not is_admin and order.status == 'Delivered' %}
+    <div class="form-section user-actions">
+        <form action="/order/{{ order.id }}/complete" method="post">
+            <button type="submit" class="btn-submit blue">Mark as Complete</button>
+        </form>
+        <button type="button" class="btn-submit yellow" onclick="openRevisionModal()">Ask for revision</button>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Revision Modal -->
+<div id="revisionModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">Request Revision</h3>
+            <span class="close" onclick="closeRevisionModal()">&times;</span>
+        </div>
+        <form action="/order/{{ order.id }}/request-revision" method="post">
+            <div class="modal-body">
+                <label for="revision_text" style="display:block;margin-bottom:0.5rem;color:#e5e7eb;font-weight:500">What needs to be changed?</label>
+                <textarea name="revision_text" id="revision_text" rows="4" placeholder="Enter your revision request..." required style="width:100%;padding:0.5rem;border-radius:8px;border:1px solid #374151;background:#0f172a;color:#fff;font-size:0.95rem;resize:vertical"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-modal secondary" onclick="closeRevisionModal()">Cancel</button>
+                <button type="submit" class="btn-modal primary">Submit revision</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openRevisionModal() {
+    document.getElementById('revisionModal').style.display = 'block';
+}
+
+function closeRevisionModal() {
+    document.getElementById('revisionModal').style.display = 'none';
+}
+
+// Close modal when clicking outside of it
+window.onclick = function(event) {
+    const modal = document.getElementById('revisionModal');
+    if (event.target == modal) {
+        modal.style.display = 'none';
+    }
+}
+</script>
+
+<style>
+.page-title {
+    font-size: 1.8rem;
+    margin-bottom: 1rem;
+    color: #fff;
+}
+
+.order-card {
+    background: #1f2937;
+    padding: 1.5rem;
+    border-radius: 12px;
+    max-width: 700px;
+    margin-bottom: 2rem;
+}
+
+.order-info p {
+    margin-bottom: 0.5rem;
+    color: #e5e7eb;
+    font-size: 0.95rem;
+}
+
+.status-badge {
+    padding: 0.25rem 0.6rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #fff;
+}
+
+.status-badge.active { background: #3b82f6; }
+.status-badge.revision { background: #f59e0b; }
+.status-badge.delivered { background: #10b981; }
+.status-badge.completed { background: #6b7280; }
+.status-badge.late { background: #ef4444; }
+
+.form-section {
+    margin-top: 1.5rem;
+    background: #111827;
+    padding: 1rem;
+    border-radius: 12px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+    color: #e5e7eb;
+}
+
+.form-group input[type="file"],
+.form-group textarea {
+    padding: 0.5rem;
+    border-radius: 8px;
+    border: 1px solid #374151;
+    background: #1f2937;
+    color: #fff;
+    font-size: 0.95rem;
+    width: 100%;
+    transition: border 0.2s;
+}
+
+.form-group input[type="file"]:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #3b82f6;
+}
+
+.btn-submit {
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    width: 100%;
+    transition: background 0.2s;
+}
+
+.btn-submit.green { background: #10b981; color: #fff; }
+.btn-submit.green:hover { background: #059669; }
+
+.btn-submit.blue { background: #3b82f6; color: #fff; }
+.btn-submit.blue:hover { background: #2563eb; }
+
+.btn-submit.yellow { background: #f59e0b; color: #fff; }
+.btn-submit.yellow:hover { background: #d97706; }
+
+.delivered-info {
+    background: #111827;
+    padding: 1rem;
+    border-radius: 8px;
+}
+
+.file-link {
+    color: #3b82f6;
+    text-decoration: underline;
+}
+
+.btn-download {
+    display:inline-block;
+    background:#22d3ee;
+    color:#0f172a;
+    font-weight:700;
+    padding:.5rem .9rem;
+    border-radius:10px;
+}
+.btn-download:hover { background:#06b6d4; }
+
+.user-actions textarea {
+    margin-bottom: 0.5rem;
+}
+
+/* Revision Modal */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+    background-color: #1f2937;
+    margin: 15% auto;
+    padding: 2rem;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    position: relative;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.modal-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0;
+}
+
+.close {
+    color: #9ca3af;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close:hover {
+    color: #fff;
+}
+
+.modal-body {
+    margin-bottom: 1.5rem;
+}
+
+.modal-footer {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+}
+
+.btn-modal {
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-modal.primary {
+    background: #f59e0b;
+    color: #fff;
+}
+
+.btn-modal.primary:hover {
+    background: #d97706;
+}
+
+.btn-modal.secondary {
+    background: #6b7280;
+    color: #fff;
+}
+
+.btn-modal.secondary:hover {
+    background: #4b5563;
+}
+</style>
 {% endblock %}

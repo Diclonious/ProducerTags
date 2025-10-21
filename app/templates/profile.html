@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}My Profile{% endblock %}
+
+{% block content %}
+<style>
+.profile-grid{display:grid;grid-template-columns:280px 1fr;gap:2rem;align-items:start}
+.card{background:#111827;border:1px solid #1f2937;border-radius:14px;padding:1.25rem;box-shadow:0 8px 25px rgba(0,0,0,0.25)}
+.section-title{font-weight:800;color:#fff;margin:0 0 1rem 0}
+.muted{color:#9ca3af}
+.avatar{width:200px;height:200px;border-radius:16px;object-fit:cover;border:2px solid rgba(255,255,255,0.08);background:#0b1020}
+.form-grid{display:grid;gap:1rem}
+.form-grid label{display:block;font-weight:600;color:#e5e7eb;margin-bottom:.35rem}
+.form-grid input{width:100%;background:#0b1020;border:1px solid #374151;border-radius:10px;color:#fff;padding:.6rem}
+.btn-primary{display:inline-block;background:#7c3aed;border:none;color:#fff;font-weight:700;padding:.6rem 1rem;border-radius:10px;cursor:pointer}
+.alert{padding:.75rem;border-radius:10px;margin-bottom:1rem}
+.alert-success{background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.35);color:#86efac}
+.alert-error{background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.35);color:#fca5a5}
+@media(max-width:900px){.profile-grid{grid-template-columns:1fr}}
+</style>
+
+<div class="profile-grid">
+  <div class="card">
+    <h3 class="section-title">Avatar</h3>
+    {% if avatar_url %}
+      <img class="avatar" src="{{ avatar_url }}" alt="Avatar">
+    {% else %}
+      <div class="avatar" style="display:grid;place-items:center;color:#64748b">No avatar</div>
+    {% endif %}
+    <form action="/profile" method="post" enctype="multipart/form-data" style="margin-top:1rem">
+      <input type="hidden" name="username" value="{{ user.username }}">
+      <input type="hidden" name="email" value="{{ user.email }}">
+      <input type="hidden" name="new_password" value="">
+      <label class="muted" style="margin-bottom:.35rem;display:block">Upload new avatar</label>
+      <input type="file" name="avatar" accept="image/*" class="form-control">
+      <div style="margin-top:.75rem">
+        <button class="btn-primary" type="submit">Save Avatar</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="card">
+    <h3 class="section-title">Profile</h3>
+
+    {% if success %}
+    <div class="alert alert-success">{{ success }}</div>
+    {% elif error %}
+    <div class="alert alert-error">{{ error }}</div>
+    {% endif %}
+
+    <form action="/profile" method="post" class="form-grid">
+      <div>
+        <label>Username</label>
+        <input type="text" name="username" value="{{ user.username }}" required>
+      </div>
+      <div>
+        <label>Email</label>
+        <input type="email" name="email" value="{{ user.email }}" required>
+      </div>
+      <div>
+        <label>Change Password (optional)</label>
+        <input type="password" name="new_password" placeholder="Leave blank to keep current">
+      </div>
+      <div>
+        <button type="submit" class="btn-primary">Update Profile</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

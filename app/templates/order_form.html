@@ -2,16 +2,16 @@
 {% block title %}Place New Order{% endblock %}
 
 {% block content %}
-<h2>Place Your Order: {{ package.name }}</h2>
-<p>Delivery: {{ package.delivery_days }} day(s) | Tags allowed: {{ package.tag_count }}</p>
+<h2 class="page-title">Place Your Order: {{ package.name }}</h2>
+<p class="package-info">Delivery: {{ package.delivery_days }} day{{ 's' if package.delivery_days != 1 }} | Tags allowed: {{ package.tag_count }}</p>
 
-<form action="/order/submit" method="post">
+<form action="/order/submit" method="post" class="order-form">
     <input type="hidden" name="package_id" value="{{ package.id }}">
 
     {% for i in range(package.tag_count) %}
-    <div>
+    <div class="form-group">
         <label for="tag{{ i }}">Tag {{ i + 1 }}:</label>
-        <input type="text" id="tag{{ i }}" name="tags" required>
+        <input type="text" id="tag{{ i }}" name="tags" placeholder="Enter tag" required>
 
         <label for="mood{{ i }}">Mood:</label>
         <select name="moods" id="mood{{ i }}">
@@ -23,11 +23,85 @@
     </div>
     {% endfor %}
 
-    <div>
+    <div class="form-group">
         <label for="details">Details (optional):</label>
-        <textarea name="details" id="details"></textarea>
+        <textarea name="details" id="details" placeholder="Provide any additional details..."></textarea>
     </div>
 
-    <button type="submit">Submit Order</button>
+    <button type="submit" class="btn-submit">Submit Order</button>
 </form>
+
+<style>
+.page-title {
+    font-size: 1.8rem;
+    margin-bottom: 0.5rem;
+    color: #fff;
+}
+
+.package-info {
+    color: #9ca3af;
+    margin-bottom: 1.5rem;
+}
+
+.order-form {
+    background: #1f2937;
+    padding: 1.5rem;
+    border-radius: 12px;
+    max-width: 600px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+    color: #e5e7eb;
+}
+
+.form-group input[type="text"],
+.form-group select,
+.form-group textarea {
+    padding: 0.5rem;
+    border-radius: 8px;
+    border: 1px solid #374151;
+    background: #111827;
+    color: #fff;
+    font-size: 0.95rem;
+    width: 100%;
+    transition: border 0.2s;
+}
+
+.form-group input[type="text"]:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #3b82f6;
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.btn-submit {
+    background: #3b82f6;
+    color: #fff;
+    font-weight: 600;
+    padding: 0.65rem 1rem;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s;
+    width: 100%;
+    margin-top: 0.5rem;
+}
+
+.btn-submit:hover {
+    background: #2563eb;
+}
+</style>
 {% endblock %}

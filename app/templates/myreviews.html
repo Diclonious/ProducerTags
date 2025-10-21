@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}My Reviews{% endblock %}
+
+{% block content %}
+<style>
+.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem}
+.title{font-weight:800;color:#fff;margin:0;font-size:1.6rem}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1rem}
+.card{background:#111827;border:1px solid #1f2937;border-radius:14px;padding:1rem;box-shadow:0 8px 25px rgba(0,0,0,.25)}
+.rating{color:#fbbf24;font-size:1.1rem;margin-bottom:.35rem}
+.pkg{color:#cbd5e1;font-weight:700}
+.meta{color:#94a3b8;font-size:.85rem}
+.comment{color:#9ca3af;font-size:.9rem;margin-top:.35rem}
+.empty{color:#94a3b8}
+</style>
+
+<div class="header">
+  <h2 class="title">My Reviews</h2>
+</div>
+
+<div class="grid">
+  {% for o in orders %}
+  <div class="card">
+    <div class="rating">{% for _ in range(o.review) %}★{% endfor %}{% for _ in range(5 - o.review) %}☆{% endfor %}</div>
+    <div class="pkg">{{ o.package.name if o.package else 'Package' }}</div>
+    <div class="meta">Order #{{ o.id }}</div>
+    {% if o.review_text %}
+    <div class="comment">“{{ o.review_text }}”</div>
+    {% endif %}
+  </div>
+  {% else %}
+  <p class="empty">You have not submitted any reviews yet.</p>
+  {% endfor %}
+</div>
+{% endblock %}
+

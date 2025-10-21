@@ -1,24 +1,108 @@
 {% extends "base.html" %}
+
+{% block title %}Sign Up{% endblock %}
+
 {% block content %}
-  <h2>Sign Up</h2>
-  {% if error %}
-    <div style="color: red;">{{ error }}</div>
-  {% endif %}
-  <form method="post" action="/signup">
-    <div>
-      <label for="username">Username</label>
-      <input type="text" id="username" name="username" required />
+<div class="signup-container">
+    <div class="signup-card">
+        <h2 class="page-title">Sign Up</h2>
+        {% if error %}
+        <div class="error-message">{{ error }}</div>
+        {% endif %}
+
+        <form method="post" action="/signup" class="signup-form">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" placeholder="Choose a username" required>
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" placeholder="Enter your email" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" placeholder="Create a password" required>
+            </div>
+
+            <button type="submit" class="btn-submit">Create Account</button>
+        </form>
     </div>
-    <div>
-      <label for="email">Email</label>
-      <input type="email" id="email" name="email" required />
-    </div>
-    <div>
-      <label for="password">Password</label>
-      <input type="password" id="password" name="password" required />
-    </div>
-    <button type="submit">Create account</button>
-  </form>
+</div>
+
+<style>
+.signup-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 80vh;
+    padding: 1rem;
+}
+
+.signup-card {
+    background: #1f2937;
+    padding: 2rem;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+}
+
+.page-title {
+    font-size: 1.8rem;
+    margin-bottom: 1rem;
+    color: #fff;
+    text-align: center;
+}
+
+.error-message {
+    color: #f87171;
+    margin-bottom: 1rem;
+    text-align: center;
+}
+
+.signup-form .form-group {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 1rem;
+}
+
+.signup-form label {
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+    color: #e5e7eb;
+}
+
+.signup-form input {
+    padding: 0.5rem;
+    border-radius: 8px;
+    border: 1px solid #374151;
+    background: #111827;
+    color: #fff;
+    font-size: 0.95rem;
+    transition: border 0.2s;
+}
+
+.signup-form input:focus {
+    outline: none;
+    border-color: #3b82f6;
+}
+
+.btn-submit {
+    width: 100%;
+    padding: 0.6rem;
+    border-radius: 8px;
+    background: #3b82f6;
+    color: #fff;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-submit:hover {
+    background: #2563eb;
+}
+</style>
 {% endblock %}
-
-

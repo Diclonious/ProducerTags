@@ -1,44 +1,137 @@
 {% extends "base.html" %}
-{% block title %}All Orders{% endblock %}
+{% block title %}Dashboard{% endblock %}
 
 {% block content %}
-<h2>All Orders</h2>
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-   {% for order in orders %}
-   <div class="card p-4 shadow rounded hover:shadow-lg transition">
-       <h3>Order #{{ order.id }}</h3>
-       <p><strong>User:</strong> {{ order.user.username }}</p>
-       <p><strong>Details:</strong> {{ order.details or "N/A" }}</p>
-       <p><strong>Tags:</strong> {{ order.tags | length }}</p>
-       <p><strong>Due in:</strong> <span id="timer-{{ order.id }}">Calculating...</span></p>
-       <a href="/order/{{ order.id }}" class="text-blue-500 hover:underline mt-2 block">View Details</a>
+<style>
+.layout{display:grid;grid-template-columns:280px 1fr;gap:1.25rem;align-items:start}
+.sidebar .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:0 8px 28px rgba(0,0,0,0.28);padding:1rem}
+.profile{display:flex;flex-direction:column;align-items:center;text-align:center;gap:.6rem}
+.profile .avatar{width:96px;height:96px;border-radius:50%;object-fit:cover;border:1px solid rgba(255,255,255,.25);background:#0b1020;display:grid;place-items:center;color:#64748b;font-weight:800;font-size:1.4rem}
+.profile .name{font-weight:900;color:#fff}
+.profile .handle{color:var(--muted);font-size:.9rem}
+.profile .actions{display:flex;gap:.5rem;flex-wrap:wrap;justify-content:center}
+.profile .actions a{border:1px solid var(--line);border-radius:10px;padding:.45rem .75rem;text-decoration:none;color:#e5e7eb}
+.profile .actions a:hover{background:rgba(255,255,255,0.06)}
+.section-title{font-weight:900;color:#fff;margin:0 0 .75rem 0}
+</style>
 
-       <script>
-           (function() {
-               var countdownDate = new Date("{{ order.due_date.isoformat() }}").getTime();
-               var timerId = "timer-{{ order.id }}";
-               function updateTimer() {
-                   var now = new Date().getTime();
-                   var distance = countdownDate - now;
-                   if (distance < 0) {
-                       document.getElementById(timerId).innerHTML = "Order is due!";
-                       clearInterval(interval);
-                       return;
-                   }
-                   var days = Math.floor(distance / (1000 * 60 * 60 * 24));
-                   var hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                   var minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-                   var seconds = Math.floor((distance % (1000 * 60)) / 1000);
-                   document.getElementById(timerId).innerHTML =
-                       days + "d " + hours + "h " + minutes + "m " + seconds + "s";
-               }
-               updateTimer(); // initial call
-               var interval = setInterval(updateTimer, 1000);
-           })();
-       </script>
-   </div>
-   {% else %}
-   <p>No orders found.</p>
-   {% endfor %}
+<div class="layout">
+  <aside class="sidebar">
+    <div class="card">
+      <div class="profile">
+        {% if request.session.get('avatar_url') %}
+          <img class="avatar" src="{{ request.session.get('avatar_url') }}" alt="{{ request.session.get('username') }}">
+        {% else %}
+          <div class="avatar">{{ request.session.get('username','U')[0]|upper }}</div>
+        {% endif %}
+        <div class="name">{{ request.session.get('username','User') }}</div>
+        <div class="handle">@{{ request.session.get('username','user')|lower }}</div>
+        <div class="actions">
+          <a href="/profile" style="display:block;text-align:center;border:1px solid var(--line);border-radius:10px;padding:.45rem .75rem;text-decoration:none;color:#e5e7eb">View profile</a>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:1rem;display:flex;justify-content:space-between;align-items:center">
+      <div class="subtle">Earned in {{ month_name }}</div>
+      <div style="font-weight:900">€{{ '%.2f'|format(earned_month or 0.0) }}</div>
+    </div>
+  </aside>
+  <section>
+{% set total = orders|length %}
+{% set active = orders|selectattr('status','equalto','Active')|list|length %}
+{% set revision = orders|selectattr('status','equalto','Revision')|list|length %}
+{% set delivered = orders|selectattr('status','equalto','Delivered')|list|length %}
+{% set late = orders|selectattr('status','equalto','Late')|list|length %}
+{% set completed = orders|selectattr('status','equalto','Completed')|list|length %}
+
+<style>
+.dash-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem}
+.dash-title{font-weight:900;color:#fff;margin:0;font-size:1.6rem}
+.kpis,.kpi{display:none}
+.toolbar{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem}
+.toolbar input{background:#0b1020;border:1px solid var(--line);border-radius:10px;color:#fff;padding:.55rem .7rem}
+.tabs{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem}
+.tab{border:1px solid var(--line);border-radius:999px;padding:.35rem .8rem;color:var(--muted);cursor:pointer}
+.tab.active{background:var(--brand);color:var(--brand-ink);border-color:rgba(226,251,82,0.35)}
+.grid{display:grid;grid-template-columns:1fr;gap:1rem}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:1rem;display:flex;flex-direction:column;gap:.75rem}
+.row{display:flex;gap:.75rem;align-items:center}
+.avatar{width:48px;height:48px;border-radius:50%;object-fit:cover;border:1px solid rgba(255,255,255,.25);background:#0b1020;display:grid;place-items:center;color:#64748b;font-weight:800}
+.meta{color:var(--muted);font-size:.9rem}
+.status{padding:.25rem .6rem;border-radius:8px;color:#0f172a;font-weight:700}
+.status.active{background:#93c5fd}
+.status.revision{background:#fcd34d}
+.status.delivered{background:#6ee7b7}
+.status.late{background:#fca5a5}
+.status.completed{background:#cbd5e1}
+.actions{display:flex;gap:.5rem;margin-left:auto}
+.btn{display:inline-flex;align-items:center;gap:.35rem;padding:.45rem .7rem;border-radius:10px;border:1px solid var(--line);color:#e5e7eb;text-decoration:none}
+.btn:hover{background:rgba(255,255,255,0.06)}
+.empty{color:var(--muted)}
+</style>
+
+<div class="dash-head">
+  <h2 class="dash-title">Seller Dashboard</h2>
+</div>
+
+<div class="tabs">
+  {% for s in ['Active','Revision','Delivered','Late','Completed'] %}
+  <div class="tab{% if loop.first %} active{% endif %}" data-status="{{ s }}">{{ s }}</div>
+  {% endfor %}
+  </div>
+
+<h3 class="section-title">Active orders</h3>
+<div class="grid" id="ordersGrid">
+  {% for order in orders %}
+  <div class="card" data-status="{{ order.status }}" data-text="{{ order.user.username }} {{ order.package.name if order.package else '' }} #{{ order.id }}">
+    <div class="row">
+      {% if order.user.avatar %}
+        <img class="avatar" src="{{ url_for('uploads', path=order.user.avatar) }}" alt="{{ order.user.username }}">
+      {% else %}
+        <div class="avatar">{{ order.user.username[0]|upper }}</div>
+      {% endif %}
+      <div>
+        <div style="font-weight:800">{{ order.user.username }}</div>
+        <div class="meta">Order #{{ order.id }} • {{ order.package.name if order.package else 'Package' }} • ${{ order.package.price if order.package else 'N/A' }}</div>
+      </div>
+      <div class="actions">
+        <a class="btn" href="/order/{{ order.id }}">View</a>
+      </div>
+    </div>
+    <div class="row" style="justify-content:space-between">
+      <div class="meta">{% if order.status == 'Active' and order.due_date %}⏱ <span class="countdown" data-due="{{ order.due_date.isoformat() }}"></span>{% else %}&nbsp;{% endif %}</div>
+      <div class="status {{ order.status|lower }}">{{ order.status }}</div>
+    </div>
+  </div>
+  {% else %}
+  <p class="empty">No orders yet.</p>
+  {% endfor %}
+</div>
+
+<script>
+function updateCountdowns(){
+  document.querySelectorAll('.countdown').forEach(el=>{
+    const due=new Date(el.dataset.due);const now=new Date();let d=Math.floor((due-now)/1000);
+    if(d<=0){el.textContent='Late';return;}const days=Math.floor(d/86400);d%=86400;const h=Math.floor(d/3600);d%=3600;const m=Math.floor(d/60);const s=d%60;
+    el.textContent=`${days?days+'d ':''}${h}h ${m}m ${s}s`;
+  });
+}
+setInterval(updateCountdowns,1000);updateCountdowns();
+
+// Filtering
+const tabs=document.querySelectorAll('.tab');
+const grid=document.getElementById('ordersGrid');
+function applyFilters(){
+  const activeTab=document.querySelector('.tab.active');
+  const status=activeTab?activeTab.dataset.status:'All';
+  grid.querySelectorAll('.card').forEach(card=>{
+    const matchStatus = status==='All' || card.dataset.status===status;
+    card.style.display = matchStatus ? '' : 'none';
+  });
+}
+tabs.forEach(t=>t.addEventListener('click',()=>{tabs.forEach(x=>x.classList.remove('active'));t.classList.add('active');applyFilters();}));
+applyFilters();
+</script>
+  </section>
 </div>
 {% endblock %}

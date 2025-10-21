@@ -1,130 +1,281 @@
-from fastapi import FastAPI, Request, Form
+from fastapi import FastAPI, Request, Form, HTTPException
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import RedirectResponse
+
 from starlette.middleware.sessions import SessionMiddleware
-from starlette.status import HTTP_302_FOUND
-from fastapi import HTTPException
+from fastapi import FastAPI, Request, HTTPException, Depends
 
 from pydantic import EmailStr, ValidationError, TypeAdapter
 from datetime import datetime, timedelta
 from sqlalchemy.orm import joinedload
+from fastapi import UploadFile, File, Form
 
 from pathlib import Path
-
+from sqlalchemy import update, text
+from sqlalchemy import func
 from app.db.database import Base, engine, SessionLocal
+from app.domain.Package import Package
 from app.domain.User import User
 from app.domain.Order import Order
 from app.domain.Tag import Tag
+from fastapi.staticfiles import StaticFiles
 
 app = FastAPI()
 
 BASE_DIR = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
-# Session middleware for simple auth state
 app.add_middleware(SessionMiddleware, secret_key="change-me")
 
-# Define once, near the top of main.py
-PACKAGES = [
-    {
-        "id": 1,
-        "name": "Basic",
-        "price": 10.0,
-        "delivery_days": 1,
-        "tag_count": 2,
-        "description": "Simple tag, 1 revision",
-        "features": ["Simple tag", "1 revision"]
-    },
-    {
-        "id": 2,
-        "name": "Standard",
-        "price": 20.0,
-        "delivery_days": 2,
-        "tag_count": 4,
-        "description": "More features, 2 revisions",
-        "features": ["More tags", "2 revisions"]
-    },
-    {
-        "id": 3,
-        "name": "Premium",
-        "price": 40.0,
-        "delivery_days": 3,
-        "tag_count": 6,
-        "description": "Full customization, unlimited revisions",
-        "features": ["Custom tags", "Unlimited revisions"]
-    },
-]
+UPLOAD_DIR = BASE_DIR / "uploads"
+UPLOAD_DIR.mkdir(exist_ok=True)
+
+app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
+
+from starlette.responses import RedirectResponse
+from starlette.status import HTTP_302_FOUND
+from sqlalchemy.orm import Session
 
 
-# startup database
-
+# Startup: create tables, admin user, and default packages
 @app.on_event("startup")
-def create_admin_user():
+def startup_event():
     db = SessionLocal()
-
+    
+    # Do not drop tables on startup; only ensure they exist
     Base.metadata.create_all(bind=engine)
+
     try:
+        # Skip schema migrations here to avoid startup delays/hangs
         admin = db.query(User).filter(User.username == "Kohina").first()
         if not admin:
             admin = User(username="Kohina", email="anabelabocvarova@yahoo.com", is_admin=True)
-            admin.set_password("Luna123!")  # ✅ Proper way to set password
+            admin.set_password("Luna123!")
             db.add(admin)
             db.commit()
-            print("✅ Admin user created: username='Kohina', password='Luna123!'")
-        else:
-            print("ℹ️ Admin user already exists.")
+            print("✅ Admin created: Kohina / Luna123!")
+        # Create default packages if none exist
+        if db.query(Package).count() == 0:
+            default_packages = [
+                {"name": "Basic", "price": 10.0, "delivery_days": 1, "tag_count": 2,
+                 "description": "Simple tag, 1 revision"},
+                {"name": "Standard", "price": 20.0, "delivery_days": 2, "tag_count": 4,
+                 "description": "More features, 2 revisions"},
+                {"name": "Premium", "price": 40.0, "delivery_days": 3, "tag_count": 6,
+                 "description": "Full customization, unlimited revisions"},
+                # se inicijaliziraat kako statichni vo bazata samo koga nema za posle da mozhe update
+            ]
+            for pkg in default_packages:
+                db.add(Package(**pkg))
+            db.commit()
     finally:
         db.close()
+
+
+# funcs for login and db
+
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+def get_current_user(request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return None
+    user = db.query(User).filter(User.id == user_id).first()
+    return user
+
+
+def login_user(request: Request, user: User):
+    request.session.update({
+        "user_id": user.id,
+        "username": user.username,
+        "is_admin": user.is_admin,
+        "email": user.email,
+    })
+    # Store avatar URL for quick header rendering
+    try:
+        if getattr(user, "avatar", None):
+            request.session["avatar_url"] = str(request.url_for("uploads", path=user.avatar))
+        else:
+            request.session.pop("avatar_url", None)
+    except Exception:
+        pass
+
+
+def require_login(request: Request, current_user=Depends(get_current_user)):
+    if not current_user:
+        next_url = str(request.url.path)
+        # redirect to login
+        raise HTTPException(
+            status_code=HTTP_302_FOUND,
+            detail=f"/login?next={next_url}"
+        )
+    return current_user
 
 
 def is_admin(request: Request) -> bool:
     return request.session.get("is_admin", False)
 
 
-# root
+def update_late_orders(db):
+    # Use DB clock to avoid client-server clock drift
+    db.execute(
+        update(Order)
+        .where(Order.status.in_(["Active", "Revision"]))
+        .where(Order.due_date < func.now())
+        .values(status="Late")
+    )
+    db.commit()
+
+
+# -------------------- AUTH --------------------
+
 @app.get("/")
 async def root(request: Request):
-    user_id = request.session.get("user_id")
-    username = request.session.get("username")
+    # Show public reviews from all users
+    db = SessionLocal()
+    try:
+        public_reviews = (
+            db.query(Order)
+            .options(joinedload(Order.package), joinedload(Order.user))
+            .filter(Order.review.isnot(None))
+            .order_by(Order.id.desc())
+            .limit(12)
+            .all()
+        )
+    finally:
+        db.close()
 
     return templates.TemplateResponse(
         "index.html",
         {
             "request": request,
-            "is_logged_in": bool(user_id),
-            "username": username,
-        },
+            "is_logged_in": bool(request.session.get("user_id")),
+            "username": request.session.get("username"),
+            "is_admin": request.session.get("is_admin"),
+            "public_reviews": public_reviews,
+        }
     )
 
 
-# login
 @app.get("/login")
 async def login(request: Request):
+    # Save "next" path (e.g., /myorders)
+    next_url = request.query_params.get("next", "/")
+    request.session["next_url"] = next_url
     return templates.TemplateResponse("login.html", {"request": request})
 
 
 @app.post("/users/login")
-async def users_login(request: Request, username: str = Form(...), password: str = Form(...)):
-    db = SessionLocal()
+async def users_login(
+        request: Request,
+        username: str = Form(...),
+        password: str = Form(...),
+        db: Session = Depends(get_db)
+):
+    user = db.query(User).filter(User.username == username).first()
+    if not user or not user.check_password(password):
+        return templates.TemplateResponse("login.html", {"request": request, "error": "Invalid username or password"})
+
+    login_user(request, user)  # ✅ Clean helper
+
+    next_url = request.session.pop("next_url", "/")
+    return RedirectResponse(url=next_url, status_code=HTTP_302_FOUND)
+
+
+@app.get("/profile")
+async def view_profile(request: Request, current_user=Depends(get_current_user), db: Session = Depends(get_db)):
+    if not current_user:
+        return RedirectResponse("/login?next=/profile", status_code=HTTP_302_FOUND)
+
+    avatar_url = None
+    if getattr(current_user, "avatar", None):
+        avatar_url = request.url_for("uploads", path=current_user.avatar)
+        try:
+            request.session["avatar_url"] = str(avatar_url)
+        except Exception:
+            pass
+
+    return templates.TemplateResponse(
+        "profile.html",
+        {"request": request, "user": current_user, "avatar_url": avatar_url}
+    )
+
+
+@app.post("/profile")
+async def update_profile(
+        request: Request,
+        username: str = Form(...),
+        email: str = Form(...),
+        new_password: str = Form(""),
+        avatar: UploadFile = File(None),
+        db: Session = Depends(get_db),
+        current_user=Depends(get_current_user)
+):
+    if not current_user:
+        return RedirectResponse("/login?next=/profile", status_code=HTTP_302_FOUND)
+
+    # Validate email
     try:
-        user = db.query(User).filter(User.username == username).first()
-        if user is None or not user.check_password(password):
-            return templates.TemplateResponse(
-                "login.html",
-                {"request": request, "error": "Invalid username or password"}
-            )
+        TypeAdapter(EmailStr).validate_python(email)
+    except ValidationError:
+        return templates.TemplateResponse(
+            "profile.html",
+            {"request": request, "user": current_user, "error": "Invalid email format"}
+        )
 
-        # Store login info + admin flag
-        request.session["user_id"] = user.id
-        request.session["username"] = user.username
-        request.session["is_admin"] = user.is_admin
+    # Check duplicates
+    if db.query(User).filter(User.username == username, User.id != current_user.id).first():
+        return templates.TemplateResponse(
+            "profile.html",
+            {"request": request, "user": current_user, "error": "Username already taken"}
+        )
 
-        return RedirectResponse(url="/", status_code=HTTP_302_FOUND)
+    if db.query(User).filter(User.email == email, User.id != current_user.id).first():
+        return templates.TemplateResponse(
+            "profile.html",
+            {"request": request, "user": current_user, "error": "Email already in use"}
+        )
 
-    finally:
-        db.close()
+    # Update fields
+    current_user.username = username
+    current_user.email = email
+
+    if new_password.strip():
+        current_user.set_password(new_password.strip())
+
+    # Handle avatar upload
+    if avatar and getattr(avatar, "filename", ""):
+        upload_dir = UPLOAD_DIR
+        upload_dir.mkdir(exist_ok=True)
+        timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+        safe_name = avatar.filename.replace(" ", "_")
+        filename = f"avatar_user{current_user.id}_{timestamp}_{safe_name}"
+        file_path = upload_dir / filename
+        content = await avatar.read()
+        with open(file_path, "wb") as f:
+            f.write(content)
+        current_user.avatar = filename
+
+    db.commit()
+
+    # Refresh session data
+    request.session["username"] = current_user.username
+
+    avatar_url = None
+    if getattr(current_user, "avatar", None):
+        avatar_url = request.url_for("uploads", path=current_user.avatar)
+
+    return templates.TemplateResponse(
+        "profile.html",
+        {"request": request, "user": current_user, "success": "Profile updated successfully!", "avatar_url": avatar_url}
+    )
 
 
-# signup
 @app.get("/signup")
 async def signup_form(request: Request):
     return templates.TemplateResponse("signup.html", {"request": request})
@@ -134,35 +285,21 @@ async def signup_form(request: Request):
 async def signup(request: Request, username: str = Form(...), email: str = Form(...), password: str = Form(...)):
     db = SessionLocal()
     try:
-        # Validate email format
         try:
             TypeAdapter(EmailStr).validate_python(email)
         except ValidationError:
-            return templates.TemplateResponse(
-                "signup.html",
-                {"request": request, "error": "Invalid email format"}
-            )
+            return templates.TemplateResponse("signup.html", {"request": request, "error": "Invalid email format"})
 
-        # Check for unique username/email
-        if db.query(User).filter(User.username == username).first() is not None:
-            return templates.TemplateResponse(
-                "signup.html",
-                {"request": request, "error": "Username already in use"}
-            )
-        if db.query(User).filter(User.email == email).first() is not None:
-            return templates.TemplateResponse(
-                "signup.html",
-                {"request": request, "error": "Email already in use"}
-            )
+        if db.query(User).filter(User.username == username).first():
+            return templates.TemplateResponse("signup.html", {"request": request, "error": "Username already in use"})
+        if db.query(User).filter(User.email == email).first():
+            return templates.TemplateResponse("signup.html", {"request": request, "error": "Email already in use"})
 
-        # Create user and hash password with Argon2
         user = User(username=username, email=email, is_admin=False)
         user.set_password(password)
         db.add(user)
         db.commit()
-
         return RedirectResponse(url="/login", status_code=HTTP_302_FOUND)
-
     finally:
         db.close()
 
@@ -173,57 +310,52 @@ async def logout(request: Request):
     return RedirectResponse(url="/", status_code=HTTP_302_FOUND)
 
 
-# orders
+# -------------------- ORDERS --------------------
+
 @app.get("/order/new")
 async def new_order(request: Request):
-    return templates.TemplateResponse("choosepackage.html", {"request": request, "packages": PACKAGES})
+    db = SessionLocal()
+    try:
+        packages = db.query(Package).all()
+    finally:
+        db.close()
+    return templates.TemplateResponse("choosepackage.html", {"request": request, "packages": packages})
 
 
 @app.post("/order/new")
 async def select_package(request: Request, package_id: int = Form(...)):
-    package = next((p for p in PACKAGES if p["id"] == package_id), None)
-    if not package:
-        return RedirectResponse(url="/order/new", status_code=HTTP_302_FOUND)
+    db = SessionLocal()
+    try:
+        package = db.query(Package).filter(Package.id == package_id).first()
+        if not package:
+            return RedirectResponse(url="/order/new", status_code=HTTP_302_FOUND)
+    finally:
+        db.close()
     return templates.TemplateResponse("order_form.html", {"request": request, "package": package})
 
 
-
-
 @app.post("/order/submit")
-async def submit_order(
-        request: Request,
-        package_id: int = Form(...),
-        details: str = Form(None),
-):
+async def submit_order(request: Request, package_id: int = Form(...), details: str = Form(None)):
     user_id = request.session.get("user_id")
     if not user_id:
         return RedirectResponse(url="/login", status_code=HTTP_302_FOUND)
 
     form = await request.form()
-    tags = form.getlist("tags")
-    moods = form.getlist("moods")
-
-    # clean data
-    tags = [t.strip() for t in tags if t.strip()]
-    moods = [m.strip() for m in moods]
+    tags = [t.strip() for t in form.getlist("tags") if t.strip()]
+    moods = [m.strip() for m in form.getlist("moods")]
 
     db = SessionLocal()
     try:
-        # Calculate due date based on package delivery_days
-        package = next((p for p in PACKAGES if p["id"] == package_id), None)
-        due_date = datetime.utcnow() + timedelta(days=package["delivery_days"])
+        package = db.query(Package).filter(Package.id == package_id).first()
+        if not package:
+            return RedirectResponse(url="/order/new", status_code=HTTP_302_FOUND)
 
-        order = Order(
-            user_id=user_id,
-            package_id=package_id,
-            details=details,
-            due_date=due_date  # store in DB, you need to add Column in Order model
-        )
+        due_date = datetime.utcnow() + timedelta(days=package.delivery_days)
+        order = Order(user_id=user_id, package_id=package.id, details=details, due_date=due_date, status="Active")
         db.add(order)
         db.commit()
         db.refresh(order)
 
-        # Save each tag with its mood
         for tag_value, mood_value in zip(tags, moods):
             db.add(Tag(order_id=order.id, name=tag_value, mood=mood_value))
         db.commit()
@@ -231,7 +363,6 @@ async def submit_order(
         db.close()
 
     return RedirectResponse(url="/myorders", status_code=HTTP_302_FOUND)
-
 
 
 @app.get("/myorders")
@@ -242,72 +373,120 @@ async def my_orders(request: Request):
 
     db = SessionLocal()
     try:
-        # Load all orders with tags
-        orders = (
+        # ✅ Update late orders in DB first
+        update_late_orders(db)
+
+        # Now fetch orders safely
+        orders = db.query(Order).options(joinedload(Order.tags), joinedload(Order.package), joinedload(Order.user)) \
+            .filter(Order.user_id == user_id).all()
+        # Spent this month (completed orders in current month)
+        from datetime import datetime
+        now = datetime.utcnow()
+        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        completed_this_month = (
             db.query(Order)
-            .options(joinedload(Order.tags))  # Only load tags
-            .filter(Order.user_id == user_id)
+            .options(joinedload(Order.package))
+            .filter(
+                Order.user_id == user_id,
+                Order.status == "Completed",
+                Order.due_date >= month_start,
+            )
             .all()
         )
+        spent_eur = 0.0
+        for o in completed_this_month:
+            spent_eur += float(o.package.price) if o.package and o.package.price is not None else 0.0
 
-        # Static packages dictionary for easy lookup
-        packages = {
-            1: {"name": "Basic", "delivery_days": 1, "tag_count": 2},
-            2: {"name": "Standard", "delivery_days": 2, "tag_count": 4},
-            3: {"name": "Premium", "delivery_days": 3, "tag_count": 6},
-        }
-
-        # Attach package info to each order dynamically
-        for order in orders:
-            order.package = packages.get(order.package_id, {"name": "Unknown"})
-            print(f"Order ID: {order.id}, Package: {order.package['name']}")
-            print("Tags:", [(tag.name, tag.mood) for tag in order.tags])
-            print("------")
-
+        return templates.TemplateResponse("myorders.html", {"request": request, "orders": orders, "spent_month": round(spent_eur, 2), "month_name": now.strftime('%B')})
     finally:
         db.close()
 
-    return templates.TemplateResponse("myorders.html", {
-        "request": request,
-        "orders": orders
-    })
-
-
-# admin side
 
 @app.get("/myorders-admin")
 async def my_orders_admin(request: Request):
-    user_id = request.session.get("user_id")
-    if not user_id or not request.session.get("is_admin"):
+    if not request.session.get("is_admin"):
         return RedirectResponse(url="/login", status_code=HTTP_302_FOUND)
 
     db = SessionLocal()
     try:
-        orders = db.query(Order).options(joinedload(Order.tags), joinedload(Order.user)).all()
-        total_orders = len(orders)
+        update_late_orders(db)  # ✅ Update DB first
+
+        orders = db.query(Order).options(joinedload(Order.tags), joinedload(Order.user), joinedload(Order.package)).all()
+        # Earnings this month (completed orders in current month)
+        from datetime import datetime
+        now = datetime.utcnow()
+        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        completed_this_month = (
+            db.query(Order)
+            .options(joinedload(Order.package))
+            .filter(
+                Order.status == "Completed",
+                Order.due_date >= month_start,
+            )
+            .all()
+        )
+        earned_eur = 0.0
+        for o in completed_this_month:
+            earned_eur += float(o.package.price) if o.package and o.package.price is not None else 0.0
+        # update session value for navbar dropdown
+        try:
+            request.session["admin_month_earnings"] = round(earned_eur, 2)
+        except Exception:
+            pass
+
+        return templates.TemplateResponse("myorders-admin.html", {"request": request, "orders": orders, "is_admin": True, "earned_month": round(earned_eur, 2), "month_name": now.strftime('%B')})
     finally:
         db.close()
 
-    return templates.TemplateResponse("myorders-admin.html", {
-        "request": request,
-        "orders": orders,
-        "total_orders": total_orders,
-        "is_admin": True,
-    })
 
+@app.get("/completed-orders")
+async def completed_orders(request: Request):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=HTTP_302_FOUND)
+
+    db = SessionLocal()
+    try:
+        if request.session.get("is_admin"):
+            # Admin sees all completed orders
+            orders = db.query(Order).options(joinedload(Order.package), joinedload(Order.user)) \
+                .filter(Order.status == "Completed") \
+                .order_by(Order.due_date.desc()) \
+                .all()
+        else:
+            # Regular users see only their own completed orders
+            orders = db.query(Order).options(joinedload(Order.package), joinedload(Order.user)) \
+                .filter(Order.user_id == user_id, Order.status == "Completed") \
+                .order_by(Order.due_date.desc()) \
+                .all()
+
+        return templates.TemplateResponse(
+            "completed_orders.html",
+            {
+                "request": request,
+                "orders": orders,
+                "is_admin": request.session.get("is_admin", False)
+            }
+        )
+    finally:
+        db.close()
 
 
 @app.get("/order/{order_id}")
 async def view_order(request: Request, order_id: int):
     user_id = request.session.get("user_id")
     if not user_id:
-        return RedirectResponse(url="/login", status_code=HTTP_302_FOUND)
+        return RedirectResponse("/login", status_code=HTTP_302_FOUND)
 
     db = SessionLocal()
     try:
+        # Update late orders first
+        update_late_orders(db)
+
+        # Fetch the order with relationships
         order = (
             db.query(Order)
-            .options(joinedload(Order.tags), joinedload(Order.user))
+            .options(joinedload(Order.tags), joinedload(Order.user), joinedload(Order.package))
             .filter(Order.id == order_id)
             .first()
         )
@@ -315,17 +494,335 @@ async def view_order(request: Request, order_id: int):
         if not order:
             raise HTTPException(status_code=404, detail="Order not found")
 
-        # Non-admins can only view their own orders
+        # Restrict non-admins to their own orders
         if not request.session.get("is_admin") and order.user_id != user_id:
             raise HTTPException(status_code=403, detail="Forbidden")
 
-        packages = {p["id"]: p for p in PACKAGES}
-        order.package = packages.get(order.package_id, {"name": "Unknown"})
+        # Generate file URL if delivery_file exists
+        file_url = None
+        if order.delivery_file:
+            file_url = request.url_for("uploads", path=order.delivery_file)
 
+        return templates.TemplateResponse(
+            "order_detail.html",
+            {
+                "request": request,
+                "order": order,
+                "file_url": file_url,
+                "is_admin": request.session.get("is_admin", False),
+            }
+        )
     finally:
         db.close()
 
-    return templates.TemplateResponse("order_detail.html", {
-        "request": request,
-        "order": order
-    })
+
+# -------------------- ORDER STATUS --------------------
+@app.post("/order/{order_id}/complete")  # user side
+async def mark_order_complete(request: Request, order_id: int):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse(url="/login", status_code=302)
+
+    db = SessionLocal()
+    try:
+        order = db.query(Order).filter(Order.id == order_id, Order.user_id == user_id).first()
+        if not order or order.status != "Delivered":
+            raise HTTPException(status_code=400, detail="Cannot complete this order")
+
+        order.status = "Completed"
+        db.commit()
+    finally:
+        db.close()
+
+    # Redirect to a review page for this order
+    return RedirectResponse(url=f"/order/{order_id}/review", status_code=302)
+
+
+@app.post("/order/{order_id}/deliver")  # admin side
+async def admin_deliver_order(
+        request: Request,
+        order_id: int,
+        response_text: str = Form(...),
+        file: UploadFile = File(...)
+):
+    if not request.session.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    db = SessionLocal()
+    try:
+        order = db.query(Order).filter(Order.id == order_id).first()
+        if not order or order.status not in ["Active", "Revision"]:
+            raise HTTPException(status_code=400, detail="Cannot deliver in this state")
+
+        # Save the uploaded file
+        upload_dir = BASE_DIR / "uploads"
+        upload_dir.mkdir(exist_ok=True)
+        file_path = upload_dir / file.filename
+
+        with open(file_path, "wb") as f:
+            content = await file.read()
+            f.write(content)
+
+        # Update order
+        order.status = "Delivered"
+        order.response = response_text
+        order.delivery_file = file.filename
+        db.commit()
+    finally:
+        db.close()
+
+    # Redirect back to admin orders page
+    return RedirectResponse(url="/myorders-admin", status_code=HTTP_302_FOUND)
+
+
+@app.post("/order/{order_id}/request-revision")  # user side
+async def user_request_revision(request: Request, order_id: int, revision_text: str = Form(...)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=HTTP_302_FOUND)
+
+    db = SessionLocal()
+    try:
+        order = db.query(Order).filter(Order.id == order_id, Order.user_id == user_id).first()
+        if not order or order.status != "Delivered":
+            raise HTTPException(status_code=400, detail="Cannot request revision in this state")
+
+        order.status = "Revision"
+        db.commit()
+    finally:
+        db.close()
+
+    return RedirectResponse("/myorders", status_code=HTTP_302_FOUND)
+
+
+@app.post("/order/{order_id}/approve-delivery")
+async def user_approve_delivery(request: Request, order_id: int):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=HTTP_302_FOUND)
+
+    db = SessionLocal()
+    try:
+        order = db.query(Order).filter(Order.id == order_id, Order.user_id == user_id).first()
+        if not order or order.status != "Delivered":
+            raise HTTPException(status_code=400, detail="Cannot approve delivery in this state")
+        order.status = "Completed"
+        db.commit()
+    finally:
+        db.close()
+    return RedirectResponse(url=f"/order/{order_id}", status_code=HTTP_302_FOUND)
+
+
+@app.get("/order/{order_id}/review")
+async def review_order(request: Request, order_id: int):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+
+    db = SessionLocal()
+    try:
+        order = db.query(Order).filter(Order.id == order_id, Order.user_id == user_id).first()
+        if not order or order.status != "Completed":
+            raise HTTPException(status_code=400, detail="Cannot review this order")
+
+        return templates.TemplateResponse(
+            "review_form.html",
+            {"request": request, "order": order}
+        )
+    finally:
+        db.close()
+
+
+@app.post("/order/{order_id}/review")
+async def submit_review(request: Request, order_id: int, review_text: str = Form(...), rating: int = Form(...)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=302)
+
+    db = SessionLocal()
+    try:
+        order = db.query(Order).filter(Order.id == order_id, Order.user_id == user_id).first()
+        if not order or order.status != "Completed":
+            raise HTTPException(status_code=400, detail="Cannot review this order")
+
+        order.review = rating
+        order.review_text = review_text
+        db.commit()
+    finally:
+        db.close()
+
+    return RedirectResponse(url="/myorders", status_code=302)
+# -------------------- REVIEWS --------------------
+@app.get("/myreviews")
+async def my_reviews(request: Request):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login?next=/myreviews", status_code=HTTP_302_FOUND)
+
+    db = SessionLocal()
+    try:
+        if request.session.get("is_admin"):
+            # Admin: show all reviews from all users
+            orders = (
+                db.query(Order)
+                .options(joinedload(Order.package), joinedload(Order.user))
+                .filter(Order.review.isnot(None))
+                .order_by(Order.id.desc())
+                .all()
+            )
+            template_name = "adminreviews.html"
+        else:
+            orders = (
+                db.query(Order)
+                .options(joinedload(Order.package))
+                .filter(Order.user_id == user_id, Order.review.isnot(None))
+                .order_by(Order.id.desc())
+                .all()
+            )
+            template_name = "myreviews.html"
+    finally:
+        db.close()
+
+    return templates.TemplateResponse(template_name, {"request": request, "orders": orders})
+
+
+# -------------------- PACKAGE MANAGEMENT --------------------
+
+@app.get("/packages")
+async def list_packages(request: Request):
+    if not request.session.get("is_admin"):
+        return RedirectResponse("/login", status_code=HTTP_302_FOUND)
+    db = SessionLocal()
+    try:
+        packages = db.query(Package).all()
+    finally:
+        db.close()
+    return templates.TemplateResponse("packages.html", {"request": request, "packages": packages})
+
+
+@app.get("/package/{package_id}/edit")
+async def edit_package_form(request: Request, package_id: int):
+    if not request.session.get("is_admin"):
+        return RedirectResponse("/login", status_code=HTTP_302_FOUND)
+    db = SessionLocal()
+    try:
+        package = db.query(Package).filter(Package.id == package_id).first()
+        if not package:
+            raise HTTPException(status_code=404, detail="Package not found")
+    finally:
+        db.close()
+    return templates.TemplateResponse("edit_package.html", {"request": request, "package": package})
+
+
+@app.post("/package/{package_id}/edit")
+async def edit_package_submit(request: Request, package_id: int, name: str = Form(...), price: float = Form(...),
+                              delivery_days: int = Form(...), tag_count: int = Form(...),
+                              description: str = Form(None)):
+    if not request.session.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    db = SessionLocal()
+    try:
+        package = db.query(Package).filter(Package.id == package_id).first()
+        if not package:
+            raise HTTPException(status_code=404, detail="Package not found")
+        package.name = name
+        package.price = price
+        package.delivery_days = delivery_days
+        package.tag_count = tag_count
+        package.description = description
+        db.commit()
+    finally:
+        db.close()
+    return RedirectResponse("/packages", status_code=HTTP_302_FOUND)
+
+
+# -------------------- ANALYTICS (Admin) --------------------
+@app.get("/analytics")
+async def analytics_overview(request: Request):
+    if not request.session.get("is_admin"):
+        return RedirectResponse("/login?next=/analytics", status_code=HTTP_302_FOUND)
+
+    db = SessionLocal()
+    try:
+        total_orders = db.query(func.count(Order.id)).scalar() or 0
+        completed_orders = db.query(func.count(Order.id)).filter(Order.status == "Completed").scalar() or 0
+        delivered_orders = db.query(func.count(Order.id)).filter(Order.status == "Delivered").scalar() or 0
+        active_orders = db.query(func.count(Order.id)).filter(Order.status == "Active").scalar() or 0
+        late_orders = db.query(func.count(Order.id)).filter(Order.status == "Late").scalar() or 0
+        revision_orders = db.query(func.count(Order.id)).filter(Order.status == "Revision").scalar() or 0
+
+        avg_rating = db.query(func.avg(Order.review)).filter(Order.review.isnot(None)).scalar()
+        avg_rating = float(avg_rating) if avg_rating is not None else 0.0
+
+        revenue = 0.0
+        completed = db.query(Order).options(joinedload(Order.package)).filter(Order.status == "Completed").all()
+        for o in completed:
+            revenue += float(o.package.price) if o.package and o.package.price is not None else 0.0
+
+        completion_rate = (completed_orders / total_orders * 100.0) if total_orders else 0.0
+
+        recent_reviews = (
+            db.query(Order)
+            .options(joinedload(Order.user), joinedload(Order.package))
+            .filter(Order.review.isnot(None))
+            .order_by(Order.id.desc())
+            .limit(12)
+            .all()
+        )
+        # Chart data aggregation
+        from datetime import date, timedelta, datetime
+        range_q = request.query_params.get("range", "monthly")
+        labels = []
+        revenue_series = []
+        completed_series = []
+        if range_q == "yearly":
+            base = date.today().replace(day=1)
+            months = []
+            for i in range(11, -1, -1):
+                y = base.year if base.month - i > 0 else base.year - 1
+                m = ((base.month - i - 1) % 12) + 1
+                months.append((y, m))
+            for y, m in months:
+                start = datetime(year=y, month=m, day=1)
+                end = datetime(year=y+1, month=1, day=1) if m == 12 else datetime(year=y, month=m+1, day=1)
+                completed_m = db.query(Order).options(joinedload(Order.package)).\
+                    filter(Order.status == "Completed", Order.due_date >= start, Order.due_date < end).all()
+                revenue_m = sum(float(o.package.price) if o.package and o.package.price is not None else 0.0 for o in completed_m)
+                labels.append(start.strftime('%b %Y'))
+                revenue_series.append(round(revenue_m, 2))
+                completed_series.append(len(completed_m))
+        else:
+            start = date.today() - timedelta(days=29)
+            for i in range(30):
+                d = start + timedelta(days=i)
+                d0 = datetime(d.year, d.month, d.day)
+                d1 = d0 + timedelta(days=1)
+                completed_d = db.query(Order).options(joinedload(Order.package)).\
+                    filter(Order.status == "Completed", Order.due_date >= d0, Order.due_date < d1).all()
+                revenue_d = sum(float(o.package.price) if o.package and o.package.price is not None else 0.0 for o in completed_d)
+                labels.append(d.strftime('%d %b'))
+                revenue_series.append(round(revenue_d, 2))
+                completed_series.append(len(completed_d))
+    finally:
+        db.close()
+
+    return templates.TemplateResponse(
+        "analytics.html",
+        {
+            "request": request,
+            "kpis": {
+                "total": total_orders,
+                "completed": completed_orders,
+                "delivered": delivered_orders,
+                "active": active_orders,
+                "avg_rating": round(avg_rating, 2),
+                "revenue": round(revenue, 2),
+                "completion_rate": round(completion_rate, 1),
+            },
+            "recent_reviews": recent_reviews,
+            "chart_labels": labels,
+            "chart_revenue": revenue_series,
+            "chart_completed": completed_series,
+        }
+    )
