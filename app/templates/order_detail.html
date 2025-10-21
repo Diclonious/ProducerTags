@@ -4,6 +4,75 @@
 {% block content %}
 <h2 class="page-title">Order #{{ order.id }} - {{ order.user.username }}</h2>
 
+<!-- Delivery Information Card -->
+<div class="delivery-card">
+    <div class="delivery-header">
+        <h3 class="delivery-title">Delivery Information</h3>
+    </div>
+    <div class="delivery-content">
+        <div class="delivery-row">
+            <div class="delivery-item">
+                <span class="delivery-label">Time for delivery:</span>
+                <span class="delivery-value">{{ order.package.delivery_days if order.package else 'N/A' }} day{{ 's' if order.package and order.package.delivery_days != 1 else '' }}</span>
+            </div>
+            <div class="delivery-item">
+                <span class="delivery-label">Ordered by:</span>
+                <span class="delivery-value">{{ order.user.username }}</span>
+            </div>
+        </div>
+        <div class="delivery-row">
+            <div class="delivery-item">
+                <span class="delivery-label">Delivery date:</span>
+                <span class="delivery-value">{{ order.due_date.strftime('%B %d, %Y') if order.due_date else 'N/A' }}</span>
+            </div>
+            <div class="delivery-item">
+                <span class="delivery-label">Total Price:</span>
+                <span class="delivery-value">${{ order.package.price if order.package else 'N/A' }}</span>
+            </div>
+        </div>
+        <div class="delivery-row">
+            <div class="delivery-item full-width">
+                <span class="delivery-label">Track order:</span>
+                <span class="delivery-value">
+                    <span class="status-badge {{ order.status|lower }}">{{ order.status }}</span>
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Support Card -->
+{% if order.status != 'Cancelled' %}
+<div class="support-card">
+    <div class="support-header">
+        <h3 class="support-title">Support</h3>
+    </div>
+    <div class="support-content">
+        <a href="#" class="support-item">
+            <div class="support-icon">
+                <span class="icon-question">?</span>
+            </div>
+            <div class="support-text">
+                <div class="support-main">FAQs</div>
+                <div class="support-sub">Find needed answers.</div>
+            </div>
+            <div class="support-arrow">></div>
+        </a>
+        <div class="support-divider"></div>
+        <a href="/order/{{ order.id }}/resolution" class="support-item">
+            <div class="support-icon">
+                <span class="icon-globe">🌐</span>
+            </div>
+            <div class="support-text">
+                <div class="support-main">Resolution center</div>
+                <div class="support-sub">Resolve order issues.</div>
+            </div>
+            <div class="support-arrow">></div>
+        </a>
+    </div>
+</div>
+{% endif %}
+
 <div class="order-card">
     <div class="order-info">
         <p><strong>Status:</strong> <span class="status-badge {{ order.status|lower }}">{{ order.status }}</span></p>
@@ -43,60 +112,241 @@
     </div>
     {% endif %}
 
+    <!-- Dispute Resolution Section -->
+    {% if order.status == 'In dispute' %}
+    <div class="form-section dispute-section">
+        <h4 class="dispute-title">Pending Request Approval</h4>
+        
+        {% if order.requested_by_admin == 'true' %}
+            <!-- Admin made the request, user needs to approve -->
+            {% if not is_admin %}
+            <div class="dispute-info">
+                <p><strong>Request Type:</strong> {{ order.request_type|title }}</p>
+                {% if order.request_type == 'cancellation' %}
+                <p><strong>Cancellation Reason:</strong> {{ order.cancellation_reason|title if order.cancellation_reason else 'Not specified' }}</p>
+                <p><strong>Admin Message:</strong> {{ order.cancellation_message or 'No message provided' }}</p>
+                {% elif order.request_type == 'extend_delivery' %}
+                <p><strong>Extension Days:</strong> {{ order.extension_days }} day{{ 's' if order.extension_days != 1 else '' }}</p>
+                <p><strong>Extension Reason:</strong> {{ order.extension_reason or 'No reason provided' }}</p>
+                {% endif %}
+                {% if order.request_message %}
+                <p><strong>Additional Details:</strong> {{ order.request_message }}</p>
+                {% endif %}
+            </div>
+            
+            <div class="dispute-actions">
+                <form action="/order/{{ order.id }}/approve-request" method="post" style="display: inline;">
+                    <button type="submit" class="btn-submit green">Approve Request</button>
+                </form>
+                <form action="/order/{{ order.id }}/reject-request" method="post" style="display: inline;">
+                    <button type="submit" class="btn-submit red">Reject Request</button>
+                </form>
+            </div>
+            {% endif %}
+        {% else %}
+            <!-- User made the request, admin needs to approve -->
+            {% if is_admin %}
+            <div class="dispute-info">
+                <p><strong>Request Type:</strong> {{ order.request_type|title }}</p>
+                {% if order.request_type == 'cancellation' %}
+                <p><strong>Cancellation Reason:</strong> {{ order.cancellation_reason|title if order.cancellation_reason else 'Not specified' }}</p>
+                <p><strong>User Message:</strong> {{ order.cancellation_message or 'No message provided' }}</p>
+                {% endif %}
+                {% if order.request_message %}
+                <p><strong>Additional Details:</strong> {{ order.request_message }}</p>
+                {% endif %}
+            </div>
+            
+            <div class="dispute-actions">
+                <form action="/order/{{ order.id }}/approve-request" method="post" style="display: inline;">
+                    <button type="submit" class="btn-submit green">Approve Request</button>
+                </form>
+                <form action="/order/{{ order.id }}/reject-request" method="post" style="display: inline;">
+                    <button type="submit" class="btn-submit red">Reject Request</button>
+                </form>
+            </div>
+            {% endif %}
+        {% endif %}
+    </div>
+    {% endif %}
+
     <!-- User Actions -->
     {% if not is_admin and order.status == 'Delivered' %}
     <div class="form-section user-actions">
         <form action="/order/{{ order.id }}/complete" method="post">
             <button type="submit" class="btn-submit blue">Mark as Complete</button>
         </form>
-        <button type="button" class="btn-submit yellow" onclick="openRevisionModal()">Ask for revision</button>
     </div>
     {% endif %}
 </div>
 
-<!-- Revision Modal -->
-<div id="revisionModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3 class="modal-title">Request Revision</h3>
-            <span class="close" onclick="closeRevisionModal()">&times;</span>
-        </div>
-        <form action="/order/{{ order.id }}/request-revision" method="post">
-            <div class="modal-body">
-                <label for="revision_text" style="display:block;margin-bottom:0.5rem;color:#e5e7eb;font-weight:500">What needs to be changed?</label>
-                <textarea name="revision_text" id="revision_text" rows="4" placeholder="Enter your revision request..." required style="width:100%;padding:0.5rem;border-radius:8px;border:1px solid #374151;background:#0f172a;color:#fff;font-size:0.95rem;resize:vertical"></textarea>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn-modal secondary" onclick="closeRevisionModal()">Cancel</button>
-                <button type="submit" class="btn-modal primary">Submit revision</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<script>
-function openRevisionModal() {
-    document.getElementById('revisionModal').style.display = 'block';
-}
-
-function closeRevisionModal() {
-    document.getElementById('revisionModal').style.display = 'none';
-}
-
-// Close modal when clicking outside of it
-window.onclick = function(event) {
-    const modal = document.getElementById('revisionModal');
-    if (event.target == modal) {
-        modal.style.display = 'none';
-    }
-}
-</script>
 
 <style>
 .page-title {
     font-size: 1.8rem;
     margin-bottom: 1rem;
     color: #fff;
+}
+
+/* Delivery Information Card */
+.delivery-card {
+    background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+    border: 1px solid #374151;
+    border-radius: 16px;
+    padding: 0;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    overflow: hidden;
+}
+
+.delivery-header {
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #374151;
+}
+
+.delivery-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0;
+    text-align: center;
+}
+
+.delivery-content {
+    padding: 1.5rem;
+}
+
+.delivery-row {
+    display: flex;
+    gap: 2rem;
+    margin-bottom: 1rem;
+}
+
+.delivery-row:last-child {
+    margin-bottom: 0;
+}
+
+.delivery-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.delivery-item.full-width {
+    flex: 1;
+}
+
+.delivery-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.delivery-value {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #fff;
+}
+
+@media (max-width: 768px) {
+    .delivery-row {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .delivery-content {
+        padding: 1rem;
+    }
+}
+
+/* Support Card */
+.support-card {
+    background: #ffffff;
+    border-radius: 12px;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.support-header {
+    background: #f8f9fa;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.support-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #212529;
+    margin: 0;
+}
+
+.support-content {
+    padding: 0;
+}
+
+.support-item {
+    display: flex;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    text-decoration: none;
+    color: inherit;
+    transition: background-color 0.2s;
+}
+
+.support-item:hover {
+    background-color: #f8f9fa;
+}
+
+.support-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #212529;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 1rem;
+    flex-shrink: 0;
+}
+
+.icon-question,
+.icon-globe {
+    color: #ffffff;
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.support-text {
+    flex: 1;
+}
+
+.support-main {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #212529;
+    margin-bottom: 0.25rem;
+}
+
+.support-sub {
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+
+.support-arrow {
+    font-size: 1.2rem;
+    color: #6c757d;
+    font-weight: bold;
+}
+
+.support-divider {
+    height: 1px;
+    background-color: #e9ecef;
+    margin: 0 1.5rem;
 }
 
 .order-card {
@@ -126,6 +376,8 @@ window.onclick = function(event) {
 .status-badge.delivered { background: #10b981; }
 .status-badge.completed { background: #6b7280; }
 .status-badge.late { background: #ef4444; }
+.status-badge.in-dispute { background: #8b5cf6; }
+.status-badge.cancelled { background: #dc2626; }
 
 .form-section {
     margin-top: 1.5rem;
@@ -183,6 +435,9 @@ window.onclick = function(event) {
 .btn-submit.yellow { background: #f59e0b; color: #fff; }
 .btn-submit.yellow:hover { background: #d97706; }
 
+.btn-submit.red { background: #ef4444; color: #fff; }
+.btn-submit.red:hover { background: #dc2626; }
+
 .delivered-info {
     background: #111827;
     padding: 1rem;
@@ -206,6 +461,44 @@ window.onclick = function(event) {
 
 .user-actions textarea {
     margin-bottom: 0.5rem;
+}
+
+/* Dispute Section */
+.dispute-section {
+    background: #1f2937;
+    border: 2px solid #8b5cf6;
+}
+
+.dispute-title {
+    color: #8b5cf6;
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.dispute-info {
+    margin-bottom: 1.5rem;
+}
+
+.dispute-info p {
+    margin-bottom: 0.5rem;
+    color: #e5e7eb;
+    font-size: 0.95rem;
+}
+
+.dispute-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.dispute-actions form {
+    flex: 1;
+    min-width: 150px;
+}
+
+.dispute-actions .btn-submit {
+    width: 100%;
 }
 
 /* Revision Modal */

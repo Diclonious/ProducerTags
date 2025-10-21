@@ -64,6 +64,8 @@
 .status.delivered{background:#6ee7b7}
 .status.late{background:#fca5a5}
 .status.completed{background:#cbd5e1}
+.status.in-dispute{background:#c084fc}
+.status.cancelled{background:#fca5a5}
 .actions{display:flex;gap:.5rem;margin-left:auto}
 .btn{display:inline-flex;align-items:center;gap:.35rem;padding:.45rem .7rem;border-radius:10px;border:1px solid var(--line);color:#e5e7eb;text-decoration:none}
 .btn:hover{background:rgba(255,255,255,0.06)}
@@ -75,7 +77,7 @@
 </div>
 
 <div class="tabs">
-  {% for s in ['Active','Revision','Delivered','Late','Completed'] %}
+  {% for s in ['Active','Revision','Delivered','Late','Completed','Cancelled'] %}
   <div class="tab{% if loop.first %} active{% endif %}" data-status="{{ s }}">{{ s }}</div>
   {% endfor %}
   </div>
@@ -125,7 +127,18 @@ function applyFilters(){
   const activeTab=document.querySelector('.tab.active');
   const status=activeTab?activeTab.dataset.status:'All';
   grid.querySelectorAll('.card').forEach(card=>{
-    const matchStatus = status==='All' || card.dataset.status===status;
+    const cardStatus = card.dataset.status;
+    let matchStatus = false;
+    
+    if (status === 'All') {
+      matchStatus = true;
+    } else if (status === 'Active') {
+      // Include both Active and In dispute orders in Active tab
+      matchStatus = cardStatus === 'Active' || cardStatus === 'In dispute';
+    } else {
+      matchStatus = cardStatus === status;
+    }
+    
     card.style.display = matchStatus ? '' : 'none';
   });
 }

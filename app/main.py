@@ -43,6 +43,29 @@ def startup_event():
     # Do not drop tables on startup; only ensure they exist
     Base.metadata.create_all(bind=engine)
 
+    # Add new columns for dispute system if they don't exist
+    try:
+        from sqlalchemy import text
+        # Check if request_type column exists
+        result = db.execute(text("SHOW COLUMNS FROM orders LIKE 'request_type'"))
+        if not result.fetchone():
+            print("Adding dispute system columns to orders table...")
+            db.execute(text("""
+                ALTER TABLE orders 
+                ADD COLUMN request_type VARCHAR(50) NULL,
+                ADD COLUMN request_message TEXT NULL,
+                ADD COLUMN cancellation_reason VARCHAR(100) NULL,
+                ADD COLUMN cancellation_message TEXT NULL,
+                ADD COLUMN extension_days INT NULL,
+                ADD COLUMN extension_reason TEXT NULL,
+                ADD COLUMN requested_by_admin VARCHAR(10) NULL
+            """))
+            db.commit()
+            print("✅ Dispute system columns added successfully!")
+    except Exception as e:
+        print(f"⚠️ Migration warning: {e}")
+        db.rollback()
+
     try:
         # Skip schema migrations here to avoid startup delays/hangs
         admin = db.query(User).filter(User.username == "Kohina").first()
@@ -686,6 +709,180 @@ async def my_reviews(request: Request):
     return templates.TemplateResponse(template_name, {"request": request, "orders": orders})
 
 
+# -------------------- RESOLUTION CENTER --------------------
+
+@app.get("/order/{order_id}/resolution")
+async def resolution_center(request: Request, order_id: int):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=HTTP_302_FOUND)
+
+    db = SessionLocal()
+    try:
+        order = (
+            db.query(Order)
+            .options(joinedload(Order.user), joinedload(Order.package))
+            .filter(Order.id == order_id)
+            .first()
+        )
+
+        if not order:
+            raise HTTPException(status_code=404, detail="Order not found")
+
+        # Restrict non-admins to their own orders
+        if not request.session.get("is_admin") and order.user_id != user_id:
+            raise HTTPException(status_code=403, detail="Forbidden")
+
+        return templates.TemplateResponse(
+            "resolution_center.html",
+            {
+                "request": request,
+                "order": order,
+                "is_admin": request.session.get("is_admin", False),
+            }
+        )
+    finally:
+        db.close()
+
+
+@app.post("/order/{order_id}/resolution/submit")
+async def submit_resolution_request(
+    request: Request,
+    order_id: int,
+    request_type: str = Form(...),
+    message: str = Form(""),
+    cancellation_reason: str = Form(""),
+    cancellation_message: str = Form(""),
+    extension_days: int = Form(0),
+    extension_reason: str = Form("")
+):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=HTTP_302_FOUND)
+
+    db = SessionLocal()
+    try:
+        # For admin users, they can submit requests for any order
+        if request.session.get("is_admin"):
+            order = db.query(Order).filter(Order.id == order_id).first()
+        else:
+            order = db.query(Order).filter(Order.id == order_id, Order.user_id == user_id).first()
+        
+        if not order:
+            raise HTTPException(status_code=404, detail="Order not found")
+
+        # Update order with resolution request - set to In dispute for all requests
+        order.status = "In dispute"
+        order.request_type = request_type
+        order.request_message = message
+        order.requested_by_admin = str(request.session.get("is_admin", False)).lower()
+        
+        if request_type == "cancellation":
+            order.cancellation_reason = cancellation_reason
+            order.cancellation_message = cancellation_message
+        elif request_type == "extend_delivery":
+            order.extension_days = extension_days
+            order.extension_reason = extension_reason
+
+        db.commit()
+    finally:
+        db.close()
+
+    return RedirectResponse(url=f"/order/{order_id}", status_code=HTTP_302_FOUND)
+
+
+@app.post("/order/{order_id}/approve-request")
+async def approve_request(request: Request, order_id: int):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=HTTP_302_FOUND)
+
+    db = SessionLocal()
+    try:
+        order = db.query(Order).filter(Order.id == order_id).first()
+        if not order or order.status != "In dispute":
+            raise HTTPException(status_code=400, detail="Cannot approve this request")
+
+        # Check if the current user is the one who should approve
+        is_admin = request.session.get("is_admin", False)
+        requested_by_admin = order.requested_by_admin == 'true'
+        
+        # Admin requests need user approval, user requests need admin approval
+        if (requested_by_admin and is_admin) or (not requested_by_admin and not is_admin):
+            raise HTTPException(status_code=400, detail="You cannot approve your own request")
+
+        # Process the approved request
+        if order.request_type == "revision":
+            order.status = "Revision"
+        elif order.request_type == "cancellation":
+            order.status = "Cancelled"
+        elif order.request_type == "extend_delivery":
+            # Extend the due date
+            if order.extension_days and order.extension_days > 0:
+                from datetime import timedelta
+                order.due_date = order.due_date + timedelta(days=order.extension_days)
+            order.status = "Active"
+
+        # Clear dispute fields
+        order.request_type = None
+        order.request_message = None
+        order.cancellation_reason = None
+        order.cancellation_message = None
+        order.extension_days = None
+        order.extension_reason = None
+        order.requested_by_admin = None
+
+        db.commit()
+    finally:
+        db.close()
+
+    return RedirectResponse(url=f"/order/{order_id}", status_code=HTTP_302_FOUND)
+
+
+@app.post("/order/{order_id}/reject-request")
+async def reject_request(request: Request, order_id: int):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=HTTP_302_FOUND)
+
+    db = SessionLocal()
+    try:
+        order = db.query(Order).filter(Order.id == order_id).first()
+        if not order or order.status != "In dispute":
+            raise HTTPException(status_code=400, detail="Cannot reject this request")
+
+        # Check if the current user is the one who should approve
+        is_admin = request.session.get("is_admin", False)
+        requested_by_admin = order.requested_by_admin == 'true'
+        
+        # Admin requests need user approval, user requests need admin approval
+        if (requested_by_admin and is_admin) or (not requested_by_admin and not is_admin):
+            raise HTTPException(status_code=400, detail="You cannot reject your own request")
+
+        # Revert to previous status (likely "Delivered" or "Active")
+        if requested_by_admin:
+            # Admin request was rejected, revert to previous status
+            order.status = "Delivered"  # or determine previous status
+        else:
+            # User request was rejected, revert to previous status
+            order.status = "Delivered"  # or determine previous status
+
+        # Clear dispute fields
+        order.request_type = None
+        order.request_message = None
+        order.cancellation_reason = None
+        order.cancellation_message = None
+        order.extension_days = None
+        order.extension_reason = None
+        order.requested_by_admin = None
+
+        db.commit()
+    finally:
+        db.close()
+
+    return RedirectResponse(url=f"/order/{order_id}", status_code=HTTP_302_FOUND)
+
+
 # -------------------- PACKAGE MANAGEMENT --------------------
 
 @app.get("/packages")
@@ -751,6 +948,8 @@ async def analytics_overview(request: Request):
         active_orders = db.query(func.count(Order.id)).filter(Order.status == "Active").scalar() or 0
         late_orders = db.query(func.count(Order.id)).filter(Order.status == "Late").scalar() or 0
         revision_orders = db.query(func.count(Order.id)).filter(Order.status == "Revision").scalar() or 0
+        dispute_orders = db.query(func.count(Order.id)).filter(Order.status == "In dispute").scalar() or 0
+        cancelled_orders = db.query(func.count(Order.id)).filter(Order.status == "Cancelled").scalar() or 0
 
         avg_rating = db.query(func.avg(Order.review)).filter(Order.review.isnot(None)).scalar()
         avg_rating = float(avg_rating) if avg_rating is not None else 0.0
@@ -760,7 +959,19 @@ async def analytics_overview(request: Request):
         for o in completed:
             revenue += float(o.package.price) if o.package and o.package.price is not None else 0.0
 
+        # Calculate expected earnings from active and revision orders
+        expected_earnings = 0.0
+        active_orders_list = db.query(Order).options(joinedload(Order.package)).filter(Order.status == "Active").all()
+        for o in active_orders_list:
+            expected_earnings += float(o.package.price) if o.package and o.package.price is not None else 0.0
+        
+        # Add revision orders to expected earnings
+        revision_orders_list = db.query(Order).options(joinedload(Order.package)).filter(Order.status == "Revision").all()
+        for o in revision_orders_list:
+            expected_earnings += float(o.package.price) if o.package and o.package.price is not None else 0.0
+
         completion_rate = (completed_orders / total_orders * 100.0) if total_orders else 0.0
+        cancellation_rate = (cancelled_orders / total_orders * 100.0) if total_orders else 0.0
 
         recent_reviews = (
             db.query(Order)
@@ -776,6 +987,7 @@ async def analytics_overview(request: Request):
         labels = []
         revenue_series = []
         completed_series = []
+        cancelled_series = []
         if range_q == "yearly":
             base = date.today().replace(day=1)
             months = []
@@ -788,10 +1000,13 @@ async def analytics_overview(request: Request):
                 end = datetime(year=y+1, month=1, day=1) if m == 12 else datetime(year=y, month=m+1, day=1)
                 completed_m = db.query(Order).options(joinedload(Order.package)).\
                     filter(Order.status == "Completed", Order.due_date >= start, Order.due_date < end).all()
+                cancelled_m = db.query(Order).options(joinedload(Order.package)).\
+                    filter(Order.status == "Cancelled", Order.due_date >= start, Order.due_date < end).all()
                 revenue_m = sum(float(o.package.price) if o.package and o.package.price is not None else 0.0 for o in completed_m)
                 labels.append(start.strftime('%b %Y'))
                 revenue_series.append(round(revenue_m, 2))
                 completed_series.append(len(completed_m))
+                cancelled_series.append(len(cancelled_m))
         else:
             start = date.today() - timedelta(days=29)
             for i in range(30):
@@ -800,10 +1015,13 @@ async def analytics_overview(request: Request):
                 d1 = d0 + timedelta(days=1)
                 completed_d = db.query(Order).options(joinedload(Order.package)).\
                     filter(Order.status == "Completed", Order.due_date >= d0, Order.due_date < d1).all()
+                cancelled_d = db.query(Order).options(joinedload(Order.package)).\
+                    filter(Order.status == "Cancelled", Order.due_date >= d0, Order.due_date < d1).all()
                 revenue_d = sum(float(o.package.price) if o.package and o.package.price is not None else 0.0 for o in completed_d)
                 labels.append(d.strftime('%d %b'))
                 revenue_series.append(round(revenue_d, 2))
                 completed_series.append(len(completed_d))
+                cancelled_series.append(len(cancelled_d))
     finally:
         db.close()
 
@@ -816,13 +1034,20 @@ async def analytics_overview(request: Request):
                 "completed": completed_orders,
                 "delivered": delivered_orders,
                 "active": active_orders,
+                "late": late_orders,
+                "revision": revision_orders,
+                "dispute": dispute_orders,
+                "cancelled": cancelled_orders,
                 "avg_rating": round(avg_rating, 2),
                 "revenue": round(revenue, 2),
+                "expected_earnings": round(expected_earnings, 2),
                 "completion_rate": round(completion_rate, 1),
+                "cancellation_rate": round(cancellation_rate, 1),
             },
             "recent_reviews": recent_reviews,
             "chart_labels": labels,
             "chart_revenue": revenue_series,
             "chart_completed": completed_series,
+            "chart_cancelled": cancelled_series,
         }
     )

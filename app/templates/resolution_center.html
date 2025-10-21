@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+{% block title %}Resolution Center - Order #{{ order.id }}{% endblock %}
+
+{% block content %}
+<div class="resolution-container">
+    <div class="resolution-header">
+        <h2 class="page-title">Resolution Center - Order #{{ order.id }}</h2>
+        <p class="resolution-subtitle">Resolve order issues and get the help you need</p>
+    </div>
+
+    <div class="resolution-card">
+        <div class="resolution-content">
+            <h3 class="resolution-section-title">What can we help you with?</h3>
+            
+            <form action="/order/{{ order.id }}/resolution/submit" method="post" id="resolutionForm">
+                <div class="form-group">
+                    <label for="request_type" class="form-label">Select Request Type</label>
+                    <select name="request_type" id="request_type" class="form-select" required onchange="toggleFields()">
+                        <option value="">Choose an option...</option>
+                        {% if not is_admin %}
+                        <option value="revision">Request Revision</option>
+                        <option value="cancellation">Request Cancellation</option>
+                        {% else %}
+                        <option value="cancellation">Request Cancellation</option>
+                        <option value="extend_delivery">Extend delivery time</option>
+                        {% endif %}
+                    </select>
+                </div>
+
+                <div id="cancellationFields" class="cancellation-fields" style="display: none;">
+                    <div class="form-group">
+                        <label for="cancellation_reason" class="form-label">Choose the reason for your cancellation request</label>
+                        <select name="cancellation_reason" id="cancellation_reason" class="form-select">
+                            <option value="">Select a reason...</option>
+                            <option value="changed_mind">Changed my mind</option>
+                            <option value="found_alternative">Found alternative service</option>
+                            <option value="quality_concerns">Quality concerns</option>
+                            <option value="delivery_delay">Delivery delay</option>
+                            <option value="communication_issues">Communication issues</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="cancellation_message" class="form-label">
+                            {% if is_admin %}
+                            Let {{ order.user.username }} know why you want to cancel this order
+                            {% else %}
+                            Let Kohina know why you want to cancel this order
+                            {% endif %}
+                        </label>
+                        <textarea name="cancellation_message" id="cancellation_message" class="form-textarea" rows="4" placeholder="Please provide details about why you want to cancel this order..."></textarea>
+                    </div>
+                </div>
+
+                <div id="extendDeliveryFields" class="extend-delivery-fields" style="display: none;">
+                    <div class="form-group">
+                        <label for="extension_days" class="form-label">Extend delivery by how many days?</label>
+                        <input type="number" name="extension_days" id="extension_days" class="form-input" min="1" max="30" placeholder="Enter number of days">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="extension_reason" class="form-label">Reason for extension</label>
+                        <textarea name="extension_reason" id="extension_reason" class="form-textarea" rows="3" placeholder="Please provide a reason for extending the delivery time..."></textarea>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="message" class="form-label" id="messageLabel">Message</label>
+                    <textarea name="message" id="message" class="form-textarea" rows="4" placeholder="Please describe your request in detail..." required></textarea>
+                </div>
+
+                <div class="form-actions">
+                    <a href="/order/{{ order.id }}" class="btn-cancel">Back to Order</a>
+                    <button type="submit" class="btn-submit">Submit Request</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleFields() {
+    const requestType = document.getElementById('request_type').value;
+    const cancellationFields = document.getElementById('cancellationFields');
+    const extendDeliveryFields = document.getElementById('extendDeliveryFields');
+    const messageLabel = document.getElementById('messageLabel');
+    const messageTextarea = document.getElementById('message');
+    
+    // Hide all conditional fields first
+    cancellationFields.style.display = 'none';
+    extendDeliveryFields.style.display = 'none';
+    
+    if (requestType === 'cancellation') {
+        cancellationFields.style.display = 'block';
+        messageLabel.textContent = 'Additional Details (Optional)';
+        messageTextarea.placeholder = 'Any additional information you\'d like to share...';
+        messageTextarea.required = false;
+    } else if (requestType === 'extend_delivery') {
+        extendDeliveryFields.style.display = 'block';
+        messageLabel.textContent = 'Additional Details (Optional)';
+        messageTextarea.placeholder = 'Any additional information about the extension...';
+        messageTextarea.required = false;
+    } else if (requestType === 'revision') {
+        messageLabel.textContent = 'What needs to be changed?';
+        messageTextarea.placeholder = 'Please describe what changes you need...';
+        messageTextarea.required = true;
+    } else {
+        messageLabel.textContent = 'Message';
+        messageTextarea.placeholder = 'Please describe your request in detail...';
+        messageTextarea.required = true;
+    }
+}
+</script>
+
+<style>
+.resolution-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.resolution-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.page-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 0.5rem;
+}
+
+.resolution-subtitle {
+    font-size: 1.1rem;
+    color: #9ca3af;
+    margin: 0;
+}
+
+.resolution-card {
+    background: #1f2937;
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.resolution-content {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.resolution-section-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-label {
+    display: block;
+    font-weight: 500;
+    color: #e5e7eb;
+    margin-bottom: 0.5rem;
+    font-size: 0.95rem;
+}
+
+.form-select,
+.form-textarea,
+.form-input {
+    width: 100%;
+    padding: 0.75rem;
+    border-radius: 8px;
+    border: 1px solid #374151;
+    background: #111827;
+    color: #fff;
+    font-size: 0.95rem;
+    transition: border-color 0.2s;
+}
+
+.form-select:focus,
+.form-textarea:focus,
+.form-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+}
+
+.form-textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+.cancellation-fields,
+.extend-delivery-fields {
+    background: #111827;
+    padding: 1.5rem;
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+    border: 1px solid #374151;
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 2rem;
+}
+
+.btn-cancel {
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    background: #6b7280;
+    color: #fff;
+    text-decoration: none;
+    font-weight: 600;
+    transition: background-color 0.2s;
+}
+
+.btn-cancel:hover {
+    background: #4b5563;
+}
+
+.btn-submit {
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    background: #3b82f6;
+    color: #fff;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.btn-submit:hover {
+    background: #2563eb;
+}
+
+@media (max-width: 768px) {
+    .resolution-container {
+        padding: 1rem;
+    }
+    
+    .resolution-card {
+        padding: 1.5rem;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+    
+    .btn-cancel,
+    .btn-submit {
+        width: 100%;
+        text-align: center;
+    }
+}
+</style>
+{% endblock %}

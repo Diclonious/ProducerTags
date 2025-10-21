@@ -25,13 +25,12 @@
 </div>
 
 <div class="kpis">
-  <div class="kpi"><div class="label">Total Orders</div><div class="value">{{ kpis.total }}</div></div>
-  <div class="kpi"><div class="label">Completed</div><div class="value">{{ kpis.completed }}</div></div>
-  <div class="kpi"><div class="label">Delivered</div><div class="value">{{ kpis.delivered }}</div></div>
-  <div class="kpi"><div class="label">Active</div><div class="value">{{ kpis.active }}</div></div>
+  <div class="kpi"><div class="label">Total Orders</div><div class="value">{{ kpis.completed }}</div></div>
+  <div class="kpi"><div class="label">Cancelled</div><div class="value">{{ kpis.cancelled }}</div></div>
+  <div class="kpi"><div class="label">Cancellation Rate</div><div class="value">{{ '%.1f'|format(kpis.cancellation_rate) }}%</div></div>
   <div class="kpi"><div class="label">Avg Rating</div><div class="value">{{ '%.2f'|format(kpis.avg_rating) }}</div></div>
-  <div class="kpi"><div class="label">Completion Rate</div><div class="value">{{ '%.1f'|format(kpis.completion_rate) }}%</div></div>
   <div class="kpi"><div class="label">Revenue</div><div class="value">${{ '%.2f'|format(kpis.revenue) }}</div></div>
+  <div class="kpi"><div class="label">Expected Earnings</div><div class="value">${{ '%.2f'|format(kpis.expected_earnings) }}</div></div>
 </div>
 
 <div class="chart">
@@ -51,6 +50,7 @@
     const labels = {{ chart_labels | tojson }};
     const revenue = {{ chart_revenue | tojson }};
     const completed = {{ chart_completed | tojson }};
+    const cancelled = {{ chart_cancelled | tojson }};
     const chart = new Chart(ctx, {
       type: 'bar',
       data: {
@@ -65,6 +65,14 @@
           label: 'Completed',
           data: completed,
           borderColor: '#60a5fa',
+          backgroundColor: 'transparent',
+          tension: 0.35,
+          yAxisID: 'y1'
+        },{
+          type: 'line',
+          label: 'Cancelled',
+          data: cancelled,
+          borderColor: '#ef4444',
           backgroundColor: 'transparent',
           tension: 0.35,
           yAxisID: 'y1'
@@ -85,6 +93,7 @@
               label: (item)=>{
                 if(item.datasetIndex===0){ return `Sales: €${item.formattedValue}`; }
                 if(item.datasetIndex===1){ return `Completed: ${item.formattedValue}`; }
+                if(item.datasetIndex===2){ return `Cancelled: ${item.formattedValue}`; }
               }
             }
           }
