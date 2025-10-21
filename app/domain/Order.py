@@ -23,6 +23,8 @@ class Order(Base):
     delivery_file = Column(String(255), nullable=True)
     review = Column(Integer, nullable=True)
     review_text = Column(Text, nullable=True)
+    completed_date = Column(DateTime, nullable=True)
+    cancelled_date = Column(DateTime, nullable=True)
     
     # Dispute system fields
     request_type = Column(String(50), nullable=True)  # 'revision', 'cancellation', 'extend_delivery'

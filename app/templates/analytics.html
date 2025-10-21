@@ -28,6 +28,7 @@
   <div class="kpi"><div class="label">Total Orders</div><div class="value">{{ kpis.total }}</div></div>
   <div class="kpi"><div class="label">Cancelled</div><div class="value">{{ kpis.cancelled }}</div></div>
   <div class="kpi"><div class="label">Cancellation Rate</div><div class="value">{{ '%.1f'|format(kpis.cancellation_rate) }}%</div></div>
+  <div class="kpi"><div class="label">Completion Rate</div><div class="value">{{ '%.1f'|format(kpis.completion_rate) }}%</div></div>
   <div class="kpi"><div class="label">Avg Rating</div><div class="value">{{ '%.2f'|format(kpis.avg_rating) }}</div></div>
   <div class="kpi"><div class="label">Revenue</div><div class="value">${{ '%.2f'|format(kpis.revenue) }}</div></div>
   <div class="kpi"><div class="label">Expected Earnings</div><div class="value">${{ '%.2f'|format(kpis.expected_earnings) }}</div></div>

@@ -77,7 +77,7 @@
 </div>
 
 <div class="tabs">
-  {% for s in ['Active','Revision','Delivered','Late','Completed','Cancelled'] %}
+  {% for s in ['Active','Revision','Late','Completed','Cancelled'] %}
   <div class="tab{% if loop.first %} active{% endif %}" data-status="{{ s }}">{{ s }}</div>
   {% endfor %}
   </div>
@@ -133,8 +133,8 @@ function applyFilters(){
     if (status === 'All') {
       matchStatus = true;
     } else if (status === 'Active') {
-      // Include both Active and In dispute orders in Active tab
-      matchStatus = cardStatus === 'Active' || cardStatus === 'In dispute';
+      // Include Active, Delivered, and In dispute orders in Active tab
+      matchStatus = cardStatus === 'Active' || cardStatus === 'Delivered' || cardStatus === 'In dispute';
     } else {
       matchStatus = cardStatus === status;
     }

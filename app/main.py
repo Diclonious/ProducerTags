@@ -418,7 +418,7 @@ async def my_orders(request: Request):
             .filter(
                 Order.user_id == user_id,
                 Order.status == "Completed",
-                Order.due_date >= month_start,
+                Order.completed_date >= month_start,
             )
             .all()
         )
@@ -450,7 +450,7 @@ async def my_orders_admin(request: Request):
             .options(joinedload(Order.package))
             .filter(
                 Order.status == "Completed",
-                Order.due_date >= month_start,
+                Order.completed_date >= month_start,
             )
             .all()
         )
@@ -554,11 +554,13 @@ async def mark_order_complete(request: Request, order_id: int):
 
     db = SessionLocal()
     try:
+        from datetime import datetime
         order = db.query(Order).filter(Order.id == order_id, Order.user_id == user_id).first()
         if not order or order.status != "Delivered":
             raise HTTPException(status_code=400, detail="Cannot complete this order")
 
         order.status = "Completed"
+        order.completed_date = datetime.utcnow()
         db.commit()
     finally:
         db.close()
@@ -632,10 +634,12 @@ async def user_approve_delivery(request: Request, order_id: int):
 
     db = SessionLocal()
     try:
+        from datetime import datetime
         order = db.query(Order).filter(Order.id == order_id, Order.user_id == user_id).first()
         if not order or order.status != "Delivered":
             raise HTTPException(status_code=400, detail="Cannot approve delivery in this state")
         order.status = "Completed"
+        order.completed_date = datetime.utcnow()
         db.commit()
     finally:
         db.close()
@@ -822,6 +826,8 @@ async def approve_request(request: Request, order_id: int):
             order.status = "Revision"
         elif order.request_type == "cancellation":
             order.status = "Cancelled"
+            from datetime import datetime
+            order.cancelled_date = datetime.utcnow()
         elif order.request_type == "extend_delivery":
             # Extend the due date
             if order.extension_days and order.extension_days > 0:
@@ -1012,9 +1018,9 @@ async def analytics_overview(request: Request):
                 start = datetime(year=y, month=m, day=1)
                 end = datetime(year=y+1, month=1, day=1) if m == 12 else datetime(year=y, month=m+1, day=1)
                 completed_m = db.query(Order).options(joinedload(Order.package)).\
-                    filter(Order.status == "Completed", Order.due_date >= start, Order.due_date < end).all()
+                    filter(Order.status == "Completed", Order.completed_date >= start, Order.completed_date < end).all()
                 cancelled_m = db.query(Order).options(joinedload(Order.package)).\
-                    filter(Order.status == "Cancelled").all()
+                    filter(Order.status == "Cancelled", Order.cancelled_date >= start, Order.cancelled_date < end).all()
                 revenue_m = sum(float(o.package.price) if o.package and o.package.price is not None else 0.0 for o in completed_m)
                 cancelled_revenue_m = sum(float(o.package.price) if o.package and o.package.price is not None else 0.0 for o in cancelled_m)
                 labels.append(start.strftime('%b %Y'))
@@ -1029,9 +1035,9 @@ async def analytics_overview(request: Request):
                 d0 = datetime(d.year, d.month, d.day)
                 d1 = d0 + timedelta(days=1)
                 completed_d = db.query(Order).options(joinedload(Order.package)).\
-                    filter(Order.status == "Completed", Order.due_date >= d0, Order.due_date < d1).all()
+                    filter(Order.status == "Completed", Order.completed_date >= d0, Order.completed_date < d1).all()
                 cancelled_d = db.query(Order).options(joinedload(Order.package)).\
-                    filter(Order.status == "Cancelled").all()
+                    filter(Order.status == "Cancelled", Order.cancelled_date >= d0, Order.cancelled_date < d1).all()
                 revenue_d = sum(float(o.package.price) if o.package and o.package.price is not None else 0.0 for o in completed_d)
                 cancelled_revenue_d = sum(float(o.package.price) if o.package and o.package.price is not None else 0.0 for o in cancelled_d)
                 labels.append(d.strftime('%d %b'))

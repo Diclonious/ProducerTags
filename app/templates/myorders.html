@@ -13,6 +13,10 @@
 .profile .actions a{border:1px solid var(--line);border-radius:10px;padding:.45rem .75rem;text-decoration:none;color:#e5e7eb;display:inline-block;margin:0 auto}
 .profile .actions a:hover{background:rgba(255,255,255,0.06)}
 .section-title{font-weight:900;color:#fff;margin:0 0 .75rem 0}
+.tabs{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem}
+.tab{border:1px solid var(--line);border-radius:999px;padding:.35rem .8rem;color:var(--muted);cursor:pointer;transition:all 0.2s}
+.tab.active{background:var(--brand);color:var(--brand-ink);border-color:rgba(226,251,82,0.35)}
+.tab:hover:not(.active){background:rgba(255,255,255,0.05)}
 </style>
 
 <div class="layout">
@@ -39,10 +43,16 @@
   <section>
     <h2 class="section-title">My Orders</h2>
 
-<div class="orders-grid">
+<div class="tabs">
+  {% for s in ['Active','Revision','Late','Completed','Cancelled','In Dispute'] %}
+  <div class="tab{% if loop.first %} active{% endif %}" data-status="{{ s }}">{{ s }}</div>
+  {% endfor %}
+</div>
+
+<h3 class="section-title">Active orders</h3>
+<div class="orders-grid" id="ordersGrid">
     {% for order in orders %}
-    {% if order.status != "Completed" %}
-    <div class="order-card">
+    <div class="order-card" data-status="{{ order.status }}" data-text="{{ order.package.name if order.package else '' }} #{{ order.id }}">
         <div class="order-card-header">
             <div style="display:flex;align-items:center;gap:.6rem">
               {% if order.user and order.user.avatar %}
@@ -65,7 +75,7 @@
 
         <p class="details"><strong>Details:</strong> {{ order.details or "N/A" }}</p>
 
-        {% if order.status == "Active" %}
+        {% if order.status in ["Active", "Delivered"] %}
         <p class="due"><strong>Due in:</strong> <span id="timer-{{ order.id }}">Calculating...</span></p>
         <script>
             (function() {
@@ -101,7 +111,6 @@
             <a href="/order/{{ order.id }}" class="btn btn-secondary">View Details</a>
         </div>
     </div>
-    {% endif %}
     {% endfor %}
     </div>
   </section>
@@ -152,9 +161,12 @@
 
 .status.active { background: #f59e0b; }
 .status.revision { background: #3b82f6; }
-.status.late { background: #ef4444; box-shadow: 0 0 0 2px rgba(239,68,68,0.25) inset; }
 .status.delivered { background: #10b981; }
+.status.late { background: #ef4444; box-shadow: 0 0 0 2px rgba(239,68,68,0.25) inset; }
 .status.pending { background: #6b7280; }
+.status.completed { background: #10b981; }
+.status.cancelled { background: #ef4444; }
+.status.in-dispute { background: #a855f7; }
 
 .tags {
     margin-bottom: 0.75rem;
@@ -194,4 +206,57 @@
 .btn-secondary { background: #111827; color: #e5e7eb; border: 1px solid #374151; }
 .btn-secondary:hover { background: #1f2937; }
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const tabs = document.querySelectorAll('.tab');
+    const ordersGrid = document.getElementById('ordersGrid');
+    const sectionTitle = document.querySelector('.section-title');
+
+    function filterOrders(status) {
+        const orders = document.querySelectorAll('.order-card');
+        let visibleCount = 0;
+
+        orders.forEach(order => {
+            const orderStatus = order.dataset.status;
+            let shouldShow = false;
+            
+            if (status === 'All') {
+                shouldShow = true;
+            } else if (status === 'Active') {
+                // Show both Active and Delivered orders in Active tab
+                shouldShow = orderStatus === 'Active' || orderStatus === 'Delivered';
+            } else {
+                shouldShow = orderStatus === status;
+            }
+            
+            if (shouldShow) {
+                order.style.display = 'block';
+                visibleCount++;
+            } else {
+                order.style.display = 'none';
+            }
+        });
+
+        // Update section title
+        sectionTitle.textContent = status === 'All' ? 'All orders' : status.toLowerCase() + ' orders';
+    }
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', function() {
+            // Remove active class from all tabs
+            tabs.forEach(t => t.classList.remove('active'));
+            // Add active class to clicked tab
+            this.classList.add('active');
+            
+            // Filter orders
+            const status = this.dataset.status;
+            filterOrders(status);
+        });
+    });
+
+    // Initialize with first tab (Active)
+    filterOrders('Active');
+});
+</script>
 {% endblock %}
