@@ -164,12 +164,30 @@ document.addEventListener('DOMContentLoaded', function() {
     function filterOrders(status) {
         orderCards.forEach(card => {
             const cardStatus = card.dataset.status;
-            const shouldShow = (status === 'Active' && (cardStatus === 'Active' || cardStatus === 'Delivered')) ||
-                             (status === 'Revision' && cardStatus === 'Revision') ||
-                             (status === 'Late' && cardStatus === 'Late') ||
-                             (status === 'Completed' && cardStatus === 'Completed') ||
-                             (status === 'Cancelled' && cardStatus === 'Cancelled') ||
-                             (status === 'In Dispute' && cardStatus === 'In dispute');
+            let shouldShow = false;
+            
+            switch(status) {
+                case 'Active':
+                    shouldShow = (cardStatus === 'Active' || cardStatus === 'Delivered');
+                    break;
+                case 'Revision':
+                    shouldShow = (cardStatus === 'Revision');
+                    break;
+                case 'Late':
+                    shouldShow = (cardStatus === 'Late');
+                    break;
+                case 'Completed':
+                    shouldShow = (cardStatus === 'Completed');
+                    break;
+                case 'Cancelled':
+                    shouldShow = (cardStatus === 'Cancelled');
+                    break;
+                case 'In Dispute':
+                    shouldShow = (cardStatus === 'In dispute');
+                    break;
+                default:
+                    shouldShow = false;
+            }
             
             card.style.display = shouldShow ? 'flex' : 'none';
         });
@@ -194,8 +212,21 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Show all orders by default on page load
-    showAllOrders();
+    // Apply filter based on active tab on page load
+    const activeTab = document.querySelector('.tab.active');
+    if (activeTab) {
+        const status = activeTab.dataset.status;
+        filterOrders(status);
+    } else {
+        // If no active tab, default to showing Active orders
+        const activeTabElement = document.querySelector('.tab[data-status="Active"]');
+        if (activeTabElement) {
+            activeTabElement.classList.add('active');
+            filterOrders('Active');
+        } else {
+            showAllOrders();
+        }
+    }
 
     // Countdown timer functionality
     function updateCountdowns() {

@@ -1,7 +1,2 @@
-from app.domain.order import Order
-
-class OrderService:
-    def create_order(self, name: str, email: str, file_path: str, details: str = "") -> Order:
-        order = Order(name=name, email=email, file_path=file_path, details=details)
-        orders_db.append(order)
-        return order
+# This file is currently unused and can be removed or implemented later
+# when order service functionality is needed

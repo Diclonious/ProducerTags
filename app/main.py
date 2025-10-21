@@ -1,19 +1,15 @@
-from fastapi import FastAPI, Request, Form, HTTPException
+from fastapi import FastAPI, Request, Form, HTTPException, Depends, UploadFile, File
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import FileResponse
-
 from starlette.middleware.sessions import SessionMiddleware
-from fastapi import FastAPI, Request, HTTPException, Depends
-
 from pydantic import EmailStr, ValidationError, TypeAdapter
 from datetime import datetime, timedelta
 from sqlalchemy.orm import joinedload
-from fastapi import UploadFile, File, Form
 
 from pathlib import Path
 from sqlalchemy import update, text
 from sqlalchemy import func
-from app.db.database import Base, engine, SessionLocal
+from app.db.database import Base, engine, SessionLocal, get_db
 from app.domain.Package import Package
 from app.domain.User import User
 from app.domain.Order import Order
@@ -106,14 +102,6 @@ def startup_event():
 # funcs for login and db
 
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
 def get_current_user(request: Request, db: Session = Depends(get_db)):
     user_id = request.session.get("user_id")
     if not user_id:
@@ -163,6 +151,108 @@ def update_late_orders(db):
         .values(status="Late")
     )
     db.commit()
+
+
+def get_orders_with_relationships(db, user_id=None, status=None, admin_view=False):
+    """Helper function to get orders with all relationships loaded"""
+    query = db.query(Order).options(
+        joinedload(Order.tags), 
+        joinedload(Order.package), 
+        joinedload(Order.user)
+    )
+    
+    if not admin_view and user_id:
+        query = query.filter(Order.user_id == user_id)
+    
+    if status:
+        query = query.filter(Order.status == status)
+    
+    return query.all()
+
+
+def calculate_monthly_revenue(db, user_id=None, status="Completed"):
+    """Helper function to calculate monthly revenue for orders"""
+    now = datetime.utcnow()
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    
+    query = db.query(Order).options(joinedload(Order.package)).filter(
+        Order.status == status,
+        Order.completed_date >= month_start,
+    )
+    
+    if user_id:
+        query = query.filter(Order.user_id == user_id)
+    
+    orders = query.all()
+    return sum(float(o.package.price) if o.package and o.package.price is not None else 0.0 for o in orders)
+
+
+def save_uploaded_file(file: UploadFile, prefix: str = "", user_id: int = None) -> str:
+    """Helper function to save uploaded files with consistent naming"""
+    upload_dir = UPLOAD_DIR
+    upload_dir.mkdir(exist_ok=True)
+    timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+    safe_name = file.filename.replace(" ", "_")
+    
+    if user_id:
+        filename = f"{prefix}_user{user_id}_{timestamp}_{safe_name}"
+    else:
+        filename = f"{prefix}_{timestamp}_{safe_name}"
+    
+    file_path = upload_dir / filename
+    return filename
+
+
+def calculate_chart_data(db, range_q="monthly"):
+    """Helper function to calculate chart data for analytics"""
+    from datetime import date, timedelta
+    
+    labels = []
+    revenue_series = []
+    completed_series = []
+    cancelled_series = []
+    cancelled_revenue_series = []
+    
+    if range_q == "yearly":
+        base = date.today().replace(day=1)
+        months = []
+        for i in range(11, -1, -1):
+            y = base.year if base.month - i > 0 else base.year - 1
+            m = ((base.month - i - 1) % 12) + 1
+            months.append((y, m))
+        for y, m in months:
+            start = datetime(year=y, month=m, day=1)
+            end = datetime(year=y+1, month=1, day=1) if m == 12 else datetime(year=y, month=m+1, day=1)
+            completed_m = db.query(Order).options(joinedload(Order.package)).\
+                filter(Order.status == "Completed", Order.completed_date >= start, Order.completed_date < end).all()
+            cancelled_m = db.query(Order).options(joinedload(Order.package)).\
+                filter(Order.status == "Cancelled", Order.cancelled_date >= start, Order.cancelled_date < end).all()
+            revenue_m = sum(float(o.package.price) if o.package and o.package.price is not None else 0.0 for o in completed_m)
+            cancelled_revenue_m = sum(float(o.package.price) if o.package and o.package.price is not None else 0.0 for o in cancelled_m)
+            labels.append(start.strftime('%b %Y'))
+            revenue_series.append(round(revenue_m, 2))
+            completed_series.append(len(completed_m))
+            cancelled_series.append(len(cancelled_m))
+            cancelled_revenue_series.append(round(cancelled_revenue_m, 2))
+    else:
+        start = date.today() - timedelta(days=29)
+        for i in range(30):
+            d = start + timedelta(days=i)
+            d0 = datetime(d.year, d.month, d.day)
+            d1 = d0 + timedelta(days=1)
+            completed_d = db.query(Order).options(joinedload(Order.package)).\
+                filter(Order.status == "Completed", Order.completed_date >= d0, Order.completed_date < d1).all()
+            cancelled_d = db.query(Order).options(joinedload(Order.package)).\
+                filter(Order.status == "Cancelled", Order.cancelled_date >= d0, Order.cancelled_date < d1).all()
+            revenue_d = sum(float(o.package.price) if o.package and o.package.price is not None else 0.0 for o in completed_d)
+            cancelled_revenue_d = sum(float(o.package.price) if o.package and o.package.price is not None else 0.0 for o in cancelled_d)
+            labels.append(d.strftime('%d %b'))
+            revenue_series.append(round(revenue_d, 2))
+            completed_series.append(len(completed_d))
+            cancelled_series.append(len(cancelled_d))
+            cancelled_revenue_series.append(round(cancelled_revenue_d, 2))
+    
+    return labels, revenue_series, completed_series, cancelled_series, cancelled_revenue_series
 
 
 # -------------------- AUTH --------------------
@@ -283,12 +373,8 @@ async def update_profile(
 
     # Handle avatar upload
     if avatar and getattr(avatar, "filename", ""):
-        upload_dir = UPLOAD_DIR
-        upload_dir.mkdir(exist_ok=True)
-        timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
-        safe_name = avatar.filename.replace(" ", "_")
-        filename = f"avatar_user{current_user.id}_{timestamp}_{safe_name}"
-        file_path = upload_dir / filename
+        filename = save_uploaded_file(avatar, "avatar", current_user.id)
+        file_path = UPLOAD_DIR / filename
         content = await avatar.read()
         with open(file_path, "wb") as f:
             f.write(content)
@@ -410,25 +496,11 @@ async def my_orders(request: Request):
         update_late_orders(db)
 
         # Now fetch orders safely
-        orders = db.query(Order).options(joinedload(Order.tags), joinedload(Order.package), joinedload(Order.user)) \
-            .filter(Order.user_id == user_id).all()
-        # Spent this month (completed orders in current month)
-        from datetime import datetime
+        orders = get_orders_with_relationships(db, user_id=user_id)
+        
+        # Calculate spent this month
+        spent_eur = calculate_monthly_revenue(db, user_id=user_id, status="Completed")
         now = datetime.utcnow()
-        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        completed_this_month = (
-            db.query(Order)
-            .options(joinedload(Order.package))
-            .filter(
-                Order.user_id == user_id,
-                Order.status == "Completed",
-                Order.completed_date >= month_start,
-            )
-            .all()
-        )
-        spent_eur = 0.0
-        for o in completed_this_month:
-            spent_eur += float(o.package.price) if o.package and o.package.price is not None else 0.0
 
         return templates.TemplateResponse("myorders.html", {"request": request, "orders": orders, "spent_month": round(spent_eur, 2), "month_name": now.strftime('%B')})
     finally:
@@ -444,23 +516,12 @@ async def my_orders_admin(request: Request):
     try:
         update_late_orders(db)  # ✅ Update DB first
 
-        orders = db.query(Order).options(joinedload(Order.tags), joinedload(Order.user), joinedload(Order.package)).all()
-        # Earnings this month (completed orders in current month)
-        from datetime import datetime
+        orders = get_orders_with_relationships(db, admin_view=True)
+        
+        # Calculate earnings this month
+        earned_eur = calculate_monthly_revenue(db, status="Completed")
         now = datetime.utcnow()
-        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        completed_this_month = (
-            db.query(Order)
-            .options(joinedload(Order.package))
-            .filter(
-                Order.status == "Completed",
-                Order.completed_date >= month_start,
-            )
-            .all()
-        )
-        earned_eur = 0.0
-        for o in completed_this_month:
-            earned_eur += float(o.package.price) if o.package and o.package.price is not None else 0.0
+        
         # update session value for navbar dropdown
         try:
             request.session["admin_month_earnings"] = round(earned_eur, 2)
@@ -482,16 +543,13 @@ async def completed_orders(request: Request):
     try:
         if request.session.get("is_admin"):
             # Admin sees all completed orders
-            orders = db.query(Order).options(joinedload(Order.package), joinedload(Order.user)) \
-                .filter(Order.status == "Completed") \
-                .order_by(Order.due_date.desc()) \
-                .all()
+            orders = get_orders_with_relationships(db, status="Completed", admin_view=True)
         else:
             # Regular users see only their own completed orders
-            orders = db.query(Order).options(joinedload(Order.package), joinedload(Order.user)) \
-                .filter(Order.user_id == user_id, Order.status == "Completed") \
-                .order_by(Order.due_date.desc()) \
-                .all()
+            orders = get_orders_with_relationships(db, user_id=user_id, status="Completed")
+        
+        # Sort by due_date descending
+        orders.sort(key=lambda x: x.due_date, reverse=True)
 
         return templates.TemplateResponse(
             "completed_orders.html",
@@ -558,7 +616,6 @@ async def mark_order_complete(request: Request, order_id: int):
 
     db = SessionLocal()
     try:
-        from datetime import datetime
         order = db.query(Order).filter(Order.id == order_id, Order.user_id == user_id).first()
         if not order or order.status != "Delivered":
             raise HTTPException(status_code=400, detail="Cannot complete this order")
@@ -590,9 +647,8 @@ async def admin_deliver_order(
             raise HTTPException(status_code=400, detail="Cannot deliver in this state")
 
         # Save the uploaded file
-        upload_dir = BASE_DIR / "uploads"
-        upload_dir.mkdir(exist_ok=True)
-        file_path = upload_dir / file.filename
+        filename = save_uploaded_file(file, "delivery")
+        file_path = UPLOAD_DIR / filename
 
         with open(file_path, "wb") as f:
             content = await file.read()
@@ -607,7 +663,7 @@ async def admin_deliver_order(
             order_id=order_id,
             delivery_number=delivery_number,
             response_text=response_text,
-            delivery_file=file.filename,
+            delivery_file=filename,
             delivered_at=datetime.utcnow()
         )
         db.add(delivery)
@@ -615,7 +671,7 @@ async def admin_deliver_order(
         # Update order status
         order.status = "Delivered"
         order.response = response_text  # Keep for backward compatibility
-        order.delivery_file = file.filename  # Keep for backward compatibility
+        order.delivery_file = filename  # Keep for backward compatibility
         db.commit()
     finally:
         db.close()
@@ -652,7 +708,6 @@ async def user_approve_delivery(request: Request, order_id: int):
 
     db = SessionLocal()
     try:
-        from datetime import datetime
         order = db.query(Order).filter(Order.id == order_id, Order.user_id == user_id).first()
         if not order or order.status != "Delivered":
             raise HTTPException(status_code=400, detail="Cannot approve delivery in this state")
@@ -918,7 +973,6 @@ async def approve_request(request: Request, order_id: int):
             order.status = "Revision"
         elif order.request_type == "cancellation":
             order.status = "Cancelled"
-            from datetime import datetime
             order.cancelled_date = datetime.utcnow()
         elif order.request_type == "extend_delivery":
             # Extend the due date
@@ -1058,27 +1112,14 @@ async def analytics_overview(request: Request):
         avg_rating = db.query(func.avg(Order.review)).filter(Order.review.isnot(None)).scalar()
         avg_rating = float(avg_rating) if avg_rating is not None else 0.0
 
-        revenue = 0.0
-        completed = db.query(Order).options(joinedload(Order.package)).filter(Order.status == "Completed").all()
-        for o in completed:
-            revenue += float(o.package.price) if o.package and o.package.price is not None else 0.0
-
-        # Calculate cancelled revenue (money lost from cancelled orders)
-        cancelled_revenue = 0.0
-        cancelled_orders_list = db.query(Order).options(joinedload(Order.package)).filter(Order.status == "Cancelled").all()
-        for o in cancelled_orders_list:
-            cancelled_revenue += float(o.package.price) if o.package and o.package.price is not None else 0.0
-
-        # Calculate expected earnings from active and revision orders
-        expected_earnings = 0.0
-        active_orders_list = db.query(Order).options(joinedload(Order.package)).filter(Order.status == "Active").all()
-        for o in active_orders_list:
-            expected_earnings += float(o.package.price) if o.package and o.package.price is not None else 0.0
+        # Calculate revenue for different order statuses
+        revenue = calculate_monthly_revenue(db, status="Completed")
+        cancelled_revenue = calculate_monthly_revenue(db, status="Cancelled")
         
-        # Add revision orders to expected earnings
+        # Calculate expected earnings from active and revision orders
+        active_orders_list = db.query(Order).options(joinedload(Order.package)).filter(Order.status == "Active").all()
         revision_orders_list = db.query(Order).options(joinedload(Order.package)).filter(Order.status == "Revision").all()
-        for o in revision_orders_list:
-            expected_earnings += float(o.package.price) if o.package and o.package.price is not None else 0.0
+        expected_earnings = sum(float(o.package.price) if o.package and o.package.price is not None else 0.0 for o in active_orders_list + revision_orders_list)
 
         completion_rate = (completed_orders / total_orders * 100.0) if total_orders else 0.0
         cancellation_rate = (cancelled_orders / total_orders * 100.0) if total_orders else 0.0
@@ -1092,51 +1133,8 @@ async def analytics_overview(request: Request):
             .all()
         )
         # Chart data aggregation
-        from datetime import date, timedelta, datetime
         range_q = request.query_params.get("range", "monthly")
-        labels = []
-        revenue_series = []
-        completed_series = []
-        cancelled_series = []
-        cancelled_revenue_series = []
-        if range_q == "yearly":
-            base = date.today().replace(day=1)
-            months = []
-            for i in range(11, -1, -1):
-                y = base.year if base.month - i > 0 else base.year - 1
-                m = ((base.month - i - 1) % 12) + 1
-                months.append((y, m))
-            for y, m in months:
-                start = datetime(year=y, month=m, day=1)
-                end = datetime(year=y+1, month=1, day=1) if m == 12 else datetime(year=y, month=m+1, day=1)
-                completed_m = db.query(Order).options(joinedload(Order.package)).\
-                    filter(Order.status == "Completed", Order.completed_date >= start, Order.completed_date < end).all()
-                cancelled_m = db.query(Order).options(joinedload(Order.package)).\
-                    filter(Order.status == "Cancelled", Order.cancelled_date >= start, Order.cancelled_date < end).all()
-                revenue_m = sum(float(o.package.price) if o.package and o.package.price is not None else 0.0 for o in completed_m)
-                cancelled_revenue_m = sum(float(o.package.price) if o.package and o.package.price is not None else 0.0 for o in cancelled_m)
-                labels.append(start.strftime('%b %Y'))
-                revenue_series.append(round(revenue_m, 2))
-                completed_series.append(len(completed_m))
-                cancelled_series.append(len(cancelled_m))
-                cancelled_revenue_series.append(round(cancelled_revenue_m, 2))
-        else:
-            start = date.today() - timedelta(days=29)
-            for i in range(30):
-                d = start + timedelta(days=i)
-                d0 = datetime(d.year, d.month, d.day)
-                d1 = d0 + timedelta(days=1)
-                completed_d = db.query(Order).options(joinedload(Order.package)).\
-                    filter(Order.status == "Completed", Order.completed_date >= d0, Order.completed_date < d1).all()
-                cancelled_d = db.query(Order).options(joinedload(Order.package)).\
-                    filter(Order.status == "Cancelled", Order.cancelled_date >= d0, Order.cancelled_date < d1).all()
-                revenue_d = sum(float(o.package.price) if o.package and o.package.price is not None else 0.0 for o in completed_d)
-                cancelled_revenue_d = sum(float(o.package.price) if o.package and o.package.price is not None else 0.0 for o in cancelled_d)
-                labels.append(d.strftime('%d %b'))
-                revenue_series.append(round(revenue_d, 2))
-                completed_series.append(len(completed_d))
-                cancelled_series.append(len(cancelled_d))
-                cancelled_revenue_series.append(round(cancelled_revenue_d, 2))
+        labels, revenue_series, completed_series, cancelled_series, cancelled_revenue_series = calculate_chart_data(db, range_q)
     finally:
         db.close()
 

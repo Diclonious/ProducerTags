@@ -62,15 +62,6 @@
         <nav>
           {% if request.session.get('user_id') %}
             <a class="link" href="{{ '/myorders-admin' if request.session.get('is_admin') else '/myorders' }}">Dashboard</a>
-            {% if not request.session.get('is_admin') %}
-              <div class="menu" id="ordersTopMenu">
-                <button class="menu-btn" onclick="toggleMenu('ordersTopMenu')">Orders ▾</button>
-                <div class="menu-items">
-                  <a href="/myorders">My Orders</a>
-                  <a href="/completed-orders">Completed Orders</a>
-                </div>
-              </div>
-            {% endif %}
             {% if request.session.get('is_admin') %}
               <a class="link" href="/analytics">Analytics</a>
             {% endif %}
