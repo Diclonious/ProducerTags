@@ -1,8 +1,11 @@
 from sqlalchemy import Column, Integer, String, Boolean
 from sqlalchemy.orm import relationship
-
 from app.db.database import Base
 from passlib.context import CryptContext
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.domain.Order import Order
 
 # Use Argon2 instead of bcrypt
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")

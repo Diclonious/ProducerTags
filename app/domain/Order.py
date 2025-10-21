@@ -1,6 +1,12 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text
 from sqlalchemy.orm import relationship
 from app.db.database import Base
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.domain.User import User
+    from app.domain.Package import Package
+    from app.domain.Tag import Tag
 
 
 class Order(Base):

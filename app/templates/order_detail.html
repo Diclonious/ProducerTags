@@ -42,7 +42,7 @@
 </div>
 
 <!-- Support Card -->
-{% if order.status != 'Cancelled' %}
+{% if order.status not in ['Cancelled', 'Completed'] %}
 <div class="support-card">
     <div class="support-header">
         <h3 class="support-title">Support</h3>

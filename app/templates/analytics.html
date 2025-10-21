@@ -25,7 +25,7 @@
 </div>
 
 <div class="kpis">
-  <div class="kpi"><div class="label">Total Orders</div><div class="value">{{ kpis.completed }}</div></div>
+  <div class="kpi"><div class="label">Total Orders</div><div class="value">{{ kpis.total }}</div></div>
   <div class="kpi"><div class="label">Cancelled</div><div class="value">{{ kpis.cancelled }}</div></div>
   <div class="kpi"><div class="label">Cancellation Rate</div><div class="value">{{ '%.1f'|format(kpis.cancellation_rate) }}%</div></div>
   <div class="kpi"><div class="label">Avg Rating</div><div class="value">{{ '%.2f'|format(kpis.avg_rating) }}</div></div>
@@ -51,6 +51,7 @@
     const revenue = {{ chart_revenue | tojson }};
     const completed = {{ chart_completed | tojson }};
     const cancelled = {{ chart_cancelled | tojson }};
+    const cancelledRevenue = {{ chart_cancelled_revenue | tojson }};
     const chart = new Chart(ctx, {
       type: 'bar',
       data: {
@@ -91,9 +92,13 @@
             callbacks: {
               title: (items)=> items[0].label,
               label: (item)=>{
-                if(item.datasetIndex===0){ return `Sales: €${item.formattedValue}`; }
-                if(item.datasetIndex===1){ return `Completed: ${item.formattedValue}`; }
-                if(item.datasetIndex===2){ return `Cancelled: ${item.formattedValue}`; }
+                if(item.datasetIndex===0){ return 'Sales: $' + item.formattedValue; }
+                if(item.datasetIndex===1){ return 'Completed: ' + item.formattedValue; }
+                if(item.datasetIndex===2){ 
+                  const cancelledValue = item.formattedValue;
+                  const cancelledRevValue = cancelledRevenue[item.dataIndex];
+                  return 'Cancelled: ' + cancelledValue + ' (Lost: $' + cancelledRevValue + ')'; 
+                }
               }
             }
           }

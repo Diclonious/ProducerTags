@@ -38,6 +38,12 @@ from sqlalchemy.orm import Session
 # Startup: create tables, admin user, and default packages
 @app.on_event("startup")
 def startup_event():
+    # Ensure all models are imported and registered
+    from app.domain.User import User
+    from app.domain.Order import Order
+    from app.domain.Package import Package
+    from app.domain.Tag import Tag
+    
     db = SessionLocal()
     
     # Do not drop tables on startup; only ensure they exist
@@ -959,6 +965,12 @@ async def analytics_overview(request: Request):
         for o in completed:
             revenue += float(o.package.price) if o.package and o.package.price is not None else 0.0
 
+        # Calculate cancelled revenue (money lost from cancelled orders)
+        cancelled_revenue = 0.0
+        cancelled_orders_list = db.query(Order).options(joinedload(Order.package)).filter(Order.status == "Cancelled").all()
+        for o in cancelled_orders_list:
+            cancelled_revenue += float(o.package.price) if o.package and o.package.price is not None else 0.0
+
         # Calculate expected earnings from active and revision orders
         expected_earnings = 0.0
         active_orders_list = db.query(Order).options(joinedload(Order.package)).filter(Order.status == "Active").all()
@@ -988,6 +1000,7 @@ async def analytics_overview(request: Request):
         revenue_series = []
         completed_series = []
         cancelled_series = []
+        cancelled_revenue_series = []
         if range_q == "yearly":
             base = date.today().replace(day=1)
             months = []
@@ -1001,12 +1014,14 @@ async def analytics_overview(request: Request):
                 completed_m = db.query(Order).options(joinedload(Order.package)).\
                     filter(Order.status == "Completed", Order.due_date >= start, Order.due_date < end).all()
                 cancelled_m = db.query(Order).options(joinedload(Order.package)).\
-                    filter(Order.status == "Cancelled", Order.due_date >= start, Order.due_date < end).all()
+                    filter(Order.status == "Cancelled").all()
                 revenue_m = sum(float(o.package.price) if o.package and o.package.price is not None else 0.0 for o in completed_m)
+                cancelled_revenue_m = sum(float(o.package.price) if o.package and o.package.price is not None else 0.0 for o in cancelled_m)
                 labels.append(start.strftime('%b %Y'))
                 revenue_series.append(round(revenue_m, 2))
                 completed_series.append(len(completed_m))
                 cancelled_series.append(len(cancelled_m))
+                cancelled_revenue_series.append(round(cancelled_revenue_m, 2))
         else:
             start = date.today() - timedelta(days=29)
             for i in range(30):
@@ -1016,12 +1031,14 @@ async def analytics_overview(request: Request):
                 completed_d = db.query(Order).options(joinedload(Order.package)).\
                     filter(Order.status == "Completed", Order.due_date >= d0, Order.due_date < d1).all()
                 cancelled_d = db.query(Order).options(joinedload(Order.package)).\
-                    filter(Order.status == "Cancelled", Order.due_date >= d0, Order.due_date < d1).all()
+                    filter(Order.status == "Cancelled").all()
                 revenue_d = sum(float(o.package.price) if o.package and o.package.price is not None else 0.0 for o in completed_d)
+                cancelled_revenue_d = sum(float(o.package.price) if o.package and o.package.price is not None else 0.0 for o in cancelled_d)
                 labels.append(d.strftime('%d %b'))
                 revenue_series.append(round(revenue_d, 2))
                 completed_series.append(len(completed_d))
                 cancelled_series.append(len(cancelled_d))
+                cancelled_revenue_series.append(round(cancelled_revenue_d, 2))
     finally:
         db.close()
 
@@ -1049,5 +1066,6 @@ async def analytics_overview(request: Request):
             "chart_revenue": revenue_series,
             "chart_completed": completed_series,
             "chart_cancelled": cancelled_series,
+            "chart_cancelled_revenue": cancelled_revenue_series,
         }
     )
