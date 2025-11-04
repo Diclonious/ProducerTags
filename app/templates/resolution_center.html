@@ -18,7 +18,9 @@
                     <select name="request_type" id="request_type" class="form-select" required onchange="toggleFields()">
                         <option value="">Choose an option...</option>
                         {% if not is_admin %}
+                        {% if order.status != "Active" and order.status != "In dispute" and order.status != "Revision" %}
                         <option value="revision">Request Revision</option>
+                        {% endif %}
                         <option value="cancellation">Request Cancellation</option>
                         {% else %}
                         <option value="cancellation">Request Cancellation</option>

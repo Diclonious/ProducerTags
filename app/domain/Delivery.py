@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from app.domain.Order import Order
+    from app.domain.User import User
 
 
 class Delivery(Base):
@@ -16,6 +17,8 @@ class Delivery(Base):
     response_text = Column(Text, nullable=True)
     delivery_file = Column(String(255), nullable=True)
     delivered_at = Column(DateTime, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # Admin who delivered
     
-    # Relationship back to order
+    # Relationships
     order = relationship("Order", back_populates="deliveries")
+    user = relationship("User")

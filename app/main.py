@@ -15,6 +15,7 @@ from app.domain.User import User
 from app.domain.Order import Order
 from app.domain.Tag import Tag
 from app.domain.Delivery import Delivery
+from app.domain.OrderEvent import OrderEvent
 from fastapi.staticfiles import StaticFiles
 
 app = FastAPI()
@@ -150,6 +151,31 @@ def update_late_orders(db):
         .where(Order.due_date < func.now())
         .values(status="Late")
     )
+    db.commit()
+
+
+def auto_complete_delivered_orders(db):
+    """Auto-complete delivered orders after 72 hours if user hasn't marked them as complete"""
+    
+    # Get all delivered orders
+    delivered_orders = db.query(Order).filter(Order.status == "Delivered").all()
+    
+    cutoff_time = datetime.utcnow() - timedelta(hours=72)
+    
+    for order in delivered_orders:
+        # Get the latest delivery for this order
+        latest_delivery = (
+            db.query(Delivery)
+            .filter(Delivery.order_id == order.id)
+            .order_by(Delivery.delivered_at.desc())
+            .first()
+        )
+        
+        # If order was delivered more than 72 hours ago, auto-complete it
+        if latest_delivery and latest_delivery.delivered_at <= cutoff_time:
+            order.status = "Completed"
+            order.completed_date = datetime.utcnow()
+    
     db.commit()
 
 
@@ -494,6 +520,8 @@ async def my_orders(request: Request):
     try:
         # ✅ Update late orders in DB first
         update_late_orders(db)
+        # Auto-complete delivered orders after 72 hours
+        auto_complete_delivered_orders(db)
 
         # Now fetch orders safely
         orders = get_orders_with_relationships(db, user_id=user_id)
@@ -515,6 +543,8 @@ async def my_orders_admin(request: Request):
     db = SessionLocal()
     try:
         update_late_orders(db)  # ✅ Update DB first
+        # Auto-complete delivered orders after 72 hours
+        auto_complete_delivered_orders(db)
 
         orders = get_orders_with_relationships(db, admin_view=True)
         
@@ -541,6 +571,9 @@ async def completed_orders(request: Request):
 
     db = SessionLocal()
     try:
+        # Auto-complete delivered orders after 72 hours
+        auto_complete_delivered_orders(db)
+        
         if request.session.get("is_admin"):
             # Admin sees all completed orders
             orders = get_orders_with_relationships(db, status="Completed", admin_view=True)
@@ -573,11 +606,19 @@ async def view_order(request: Request, order_id: int):
     try:
         # Update late orders first
         update_late_orders(db)
+        # Auto-complete delivered orders after 72 hours
+        auto_complete_delivered_orders(db)
 
         # Fetch the order with relationships
         order = (
             db.query(Order)
-            .options(joinedload(Order.tags), joinedload(Order.user), joinedload(Order.package), joinedload(Order.deliveries))
+            .options(
+                joinedload(Order.tags), 
+                joinedload(Order.user), 
+                joinedload(Order.package), 
+                joinedload(Order.deliveries).joinedload(Delivery.user),
+                joinedload(Order.events).joinedload(OrderEvent.user)
+            )
             .filter(Order.id == order_id)
             .first()
         )
@@ -594,6 +635,58 @@ async def view_order(request: Request, order_id: int):
         if order.delivery_file:
             file_url = request.url_for("uploads", path=order.delivery_file)
 
+        # Combine deliveries and events into a single timeline, sorted chronologically
+        timeline_items = []
+        
+        # Add deliveries
+        if order.deliveries:
+            for delivery in order.deliveries:
+                if delivery.delivered_at:  # Only add deliveries with valid timestamps
+                    timeline_items.append({
+                        'type': 'delivery',
+                        'delivery': delivery,
+                        'date': delivery.delivered_at
+                    })
+        
+        # Add events (excluding 'delivered' events since they're represented by deliveries)
+        # Exclude revision_requested events if order is currently in dispute with revision request
+        # (they're shown in the Dispute Card section instead to avoid duplication)
+        if order.events:
+            for event in order.events:
+                if event.event_type != 'delivered' and event.created_at:  # Only add events with valid timestamps
+                    # Skip revision_requested events if order is currently in dispute with revision request
+                    # (they're shown in the Dispute Card section)
+                    if event.event_type == 'revision_requested' and order.status == 'In dispute' and order.request_type == 'revision':
+                        continue
+                    timeline_items.append({
+                        'type': 'event',
+                        'event': event,
+                        'date': event.created_at
+                    })
+        
+        # Add legacy delivery if exists
+        if order.status == 'Delivered' and order.delivery_file and not order.deliveries:
+            legacy_date = order.due_date or datetime.utcnow()
+            timeline_items.append({
+                'type': 'legacy_delivery',
+                'order': order,
+                'date': legacy_date
+            })
+        
+        # Sort by date chronologically (oldest first) - this ensures deliveries appear in order
+        # and events appear in chronological order relative to deliveries
+        # Use timestamp comparison to ensure proper ordering
+        def get_sort_key(item):
+            date = item['date']
+            if date is None:
+                return datetime.min
+            # Ensure we're comparing datetime objects properly
+            if isinstance(date, datetime):
+                return date
+            return datetime.min
+        
+        timeline_items.sort(key=get_sort_key, reverse=False)
+
         return templates.TemplateResponse(
             "order_detail.html",
             {
@@ -601,6 +694,7 @@ async def view_order(request: Request, order_id: int):
                 "order": order,
                 "file_url": file_url,
                 "is_admin": request.session.get("is_admin", False),
+                "timeline_items": timeline_items,
             }
         )
     finally:
@@ -622,6 +716,16 @@ async def mark_order_complete(request: Request, order_id: int):
 
         order.status = "Completed"
         order.completed_date = datetime.utcnow()
+        
+        # Create order event for completion
+        event = OrderEvent(
+            order_id=order.id,
+            event_type="completed",
+            user_id=user_id,
+            event_message="Order marked as completed",
+            created_at=datetime.utcnow()
+        )
+        db.add(event)
         db.commit()
     finally:
         db.close()
@@ -664,7 +768,8 @@ async def admin_deliver_order(
             delivery_number=delivery_number,
             response_text=response_text,
             delivery_file=filename,
-            delivered_at=datetime.utcnow()
+            delivered_at=datetime.utcnow(),
+            user_id=request.session.get("user_id")  # Admin who delivered
         )
         db.add(delivery)
 
@@ -672,6 +777,16 @@ async def admin_deliver_order(
         order.status = "Delivered"
         order.response = response_text  # Keep for backward compatibility
         order.delivery_file = filename  # Keep for backward compatibility
+        
+        # Create order event for delivery
+        event = OrderEvent(
+            order_id=order.id,
+            event_type="delivered",
+            user_id=request.session.get("user_id"),
+            event_message=response_text,
+            created_at=datetime.utcnow()
+        )
+        db.add(event)
         db.commit()
     finally:
         db.close()
@@ -688,11 +803,25 @@ async def user_request_revision(request: Request, order_id: int, revision_text: 
 
     db = SessionLocal()
     try:
-        order = db.query(Order).filter(Order.id == order_id, Order.user_id == user_id).first()
+        order = db.query(Order).options(joinedload(Order.package)).filter(Order.id == order_id, Order.user_id == user_id).first()
         if not order or order.status != "Delivered":
             raise HTTPException(status_code=400, detail="Cannot request revision in this state")
 
+        # Reset timer: calculate new due_date based on package delivery days
+        if order.package and order.package.delivery_days:
+            order.due_date = datetime.utcnow() + timedelta(days=order.package.delivery_days)
+        
         order.status = "Revision"
+        
+        # Create order event for revision request
+        event = OrderEvent(
+            order_id=order.id,
+            event_type="revision_requested",
+            user_id=user_id,
+            event_message=revision_text,
+            created_at=datetime.utcnow()
+        )
+        db.add(event)
         db.commit()
     finally:
         db.close()
@@ -928,6 +1057,10 @@ async def submit_resolution_request(
         if not order:
             raise HTTPException(status_code=404, detail="Order not found")
 
+        # Validate revision requests - can only be made when order is not Active, In dispute, or Revision
+        if request_type == "revision" and (order.status == "Active" or order.status == "In dispute" or order.status == "Revision"):
+            raise HTTPException(status_code=400, detail="Cannot request revision at this time. Revision requests can only be made for delivered orders that are not already in revision or dispute.")
+
         # Update order with resolution request - set to In dispute for all requests
         order.status = "In dispute"
         order.request_type = request_type
@@ -941,6 +1074,24 @@ async def submit_resolution_request(
             order.extension_days = extension_days
             order.extension_reason = extension_reason
 
+        # Create order event
+        event_type_map = {
+            "cancellation": "cancellation_requested",
+            "revision": "revision_requested",
+            "extend_delivery": "extension_requested"
+        }
+        event = OrderEvent(
+            order_id=order.id,
+            event_type=event_type_map.get(request_type, "request_submitted"),
+            user_id=user_id,
+            event_message=message,
+            cancellation_reason=cancellation_reason if request_type == "cancellation" else None,
+            cancellation_message=cancellation_message if request_type == "cancellation" else None,
+            extension_days=extension_days if request_type == "extend_delivery" else None,
+            extension_reason=extension_reason if request_type == "extend_delivery" else None,
+            created_at=datetime.utcnow()
+        )
+        db.add(event)
         db.commit()
     finally:
         db.close()
@@ -956,7 +1107,7 @@ async def approve_request(request: Request, order_id: int):
 
     db = SessionLocal()
     try:
-        order = db.query(Order).filter(Order.id == order_id).first()
+        order = db.query(Order).options(joinedload(Order.package)).filter(Order.id == order_id).first()
         if not order or order.status != "In dispute":
             raise HTTPException(status_code=400, detail="Cannot approve this request")
 
@@ -968,22 +1119,44 @@ async def approve_request(request: Request, order_id: int):
         if (requested_by_admin and is_admin) or (not requested_by_admin and not is_admin):
             raise HTTPException(status_code=400, detail="You cannot approve your own request")
 
+        # Store request info before clearing for event
+        request_type = order.request_type
+        request_message = order.request_message
+        
         # Process the approved request
         if order.request_type == "revision":
+            # Reset timer: calculate new due_date based on package delivery days
+            if order.package and order.package.delivery_days:
+                order.due_date = datetime.utcnow() + timedelta(days=order.package.delivery_days)
             order.status = "Revision"
+            # Keep request_message for revision requests so it can be displayed
         elif order.request_type == "cancellation":
             order.status = "Cancelled"
             order.cancelled_date = datetime.utcnow()
         elif order.request_type == "extend_delivery":
             # Extend the due date
             if order.extension_days and order.extension_days > 0:
-                from datetime import timedelta
                 order.due_date = order.due_date + timedelta(days=order.extension_days)
             order.status = "Active"
 
-        # Clear dispute fields
+        # Create order event for approved request
+        event = OrderEvent(
+            order_id=order.id,
+            event_type="request_approved",
+            user_id=user_id,
+            event_message=request_message,
+            cancellation_reason=order.cancellation_reason if request_type == "cancellation" else None,
+            cancellation_message=order.cancellation_message if request_type == "cancellation" else None,
+            extension_days=order.extension_days if request_type == "extend_delivery" else None,
+            extension_reason=order.extension_reason if request_type == "extend_delivery" else None,
+            created_at=datetime.utcnow()
+        )
+        db.add(event)
+
+        # Clear dispute fields (except request_message for revisions)
+        if order.request_type != "revision":
+            order.request_message = None
         order.request_type = None
-        order.request_message = None
         order.cancellation_reason = None
         order.cancellation_message = None
         order.extension_days = None
@@ -1017,13 +1190,37 @@ async def reject_request(request: Request, order_id: int):
         if (requested_by_admin and is_admin) or (not requested_by_admin and not is_admin):
             raise HTTPException(status_code=400, detail="You cannot reject your own request")
 
-        # Revert to previous status (likely "Delivered" or "Active")
-        if requested_by_admin:
-            # Admin request was rejected, revert to previous status
-            order.status = "Delivered"  # or determine previous status
+        # Store request info before clearing for event
+        request_type = order.request_type
+        request_message = order.request_message
+
+        # Revert to appropriate status based on request type
+        if request_type == "cancellation":
+            # Cancellation requests rejected → go back to Active
+            order.status = "Active"
+        elif request_type == "revision":
+            # Revision requests rejected → go back to Delivered (revision requests come from delivered orders)
+            order.status = "Delivered"
+        elif request_type == "extend_delivery":
+            # Extension requests rejected → go back to Active (assuming it was active/late/revision before)
+            order.status = "Active"
         else:
-            # User request was rejected, revert to previous status
-            order.status = "Delivered"  # or determine previous status
+            # Fallback: default to Active if request_type is unknown
+            order.status = "Active"
+
+        # Create order event for rejected request
+        event = OrderEvent(
+            order_id=order.id,
+            event_type="request_rejected",
+            user_id=user_id,
+            event_message=request_message,
+            cancellation_reason=order.cancellation_reason if request_type == "cancellation" else None,
+            cancellation_message=order.cancellation_message if request_type == "cancellation" else None,
+            extension_days=order.extension_days if request_type == "extend_delivery" else None,
+            extension_reason=order.extension_reason if request_type == "extend_delivery" else None,
+            created_at=datetime.utcnow()
+        )
+        db.add(event)
 
         # Clear dispute fields
         order.request_type = None

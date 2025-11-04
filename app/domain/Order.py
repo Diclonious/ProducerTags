@@ -39,3 +39,4 @@ class Order(Base):
     package = relationship("Package")
     tags = relationship("Tag", back_populates="order")
     deliveries = relationship("Delivery", back_populates="order", cascade="all, delete-orphan")
+    events = relationship("OrderEvent", back_populates="order", cascade="all, delete-orphan", order_by="OrderEvent.created_at.desc()")
