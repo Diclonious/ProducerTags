@@ -1,94 +1,242 @@
 {% extends "base.html" %}
-{% block title %}Completed Orders{% endblock %}
+{% block title %}Completed Orders - TaggedByBelle{% endblock %}
+
+{% block extra_css %}
+<style>
+  .completed-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 var(--space-6);
+  }
+  
+  .completed-header {
+    margin-bottom: var(--space-8);
+  }
+  
+  .completed-title {
+    font-size: var(--text-4xl);
+    font-weight: 900;
+    margin-bottom: var(--space-3);
+  }
+  
+  .completed-subtitle {
+    font-size: var(--text-lg);
+    color: var(--text-secondary);
+  }
+  
+  .orders-grid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+  
+  .order-card {
+    background: var(--surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-xl);
+    padding: var(--space-6);
+    display: flex;
+    align-items: center;
+    gap: var(--space-6);
+    transition: all var(--transition-base);
+  }
+  
+  .order-card:hover {
+    border-color: var(--border-strong);
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+  }
+  
+  .order-user {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-width: 200px;
+  }
+  
+  .order-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-lg);
+    object-fit: cover;
+    background: linear-gradient(135deg, var(--accent-purple) 0%, #6d28d9 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 700;
+    border: 2px solid var(--border-default);
+    flex-shrink: 0;
+  }
+  
+  .order-user-info {
+    flex: 1;
+    min-width: 0;
+  }
+  
+  .order-username {
+    font-weight: 700;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .order-id {
+    font-size: var(--text-sm);
+    color: var(--text-tertiary);
+  }
+  
+  .order-package {
+    font-size: var(--text-lg);
+    font-weight: 700;
+    color: var(--text-primary);
+    min-width: 150px;
+  }
+  
+  .order-review {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 200px;
+  }
+  
+  .review-stars {
+    display: flex;
+    gap: 2px;
+  }
+  
+  .star {
+    color: #fbbf24;
+    font-size: var(--text-lg);
+  }
+  
+  .star-empty {
+    color: var(--border-default);
+  }
+  
+  .review-status {
+    font-size: var(--text-sm);
+    color: var(--text-tertiary);
+  }
+  
+  .order-actions {
+    margin-left: auto;
+  }
+  
+  .order-view-btn {
+    padding: var(--space-3) var(--space-5);
+    background: var(--surface-hover);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    color: var(--text-primary);
+    text-decoration: none;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    transition: all var(--transition-fast);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+  
+  .order-view-btn:hover {
+    background: var(--bg-elevated);
+    border-color: var(--brand);
+    color: var(--brand);
+  }
+  
+  @media (max-width: 1024px) {
+    .order-card {
+      flex-wrap: wrap;
+    }
+    
+    .order-actions {
+      width: 100%;
+      margin-left: 0;
+    }
+    
+    .order-view-btn {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+  
+  @media (max-width: 768px) {
+    .completed-title {
+      font-size: var(--text-3xl);
+    }
+    
+    .order-card {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    
+    .order-user,
+    .order-package,
+    .order-review {
+      width: 100%;
+      min-width: 100%;
+    }
+  }
+</style>
+{% endblock %}
 
 {% block content %}
-<h2 class="page-title">Completed Orders</h2>
-
-<div class="orders-grid">
+<div class="completed-container">
+  <div class="completed-header">
+    <h1 class="completed-title">Completed Orders</h1>
+    <p class="completed-subtitle">All orders that have been successfully completed</p>
+  </div>
+  
+  {% if orders %}
+  <div class="orders-grid">
     {% for order in orders %}
     <div class="order-card">
-        <div class="order-info" style="display:flex;align-items:center;gap:.75rem">
-            {% if order.user and order.user.avatar %}
-              <img src="{{ url_for('uploads', path=order.user.avatar) }}" alt="Avatar" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:1px solid rgba(255,255,255,.25)">
-            {% endif %}
-            <div>
-              <p class="order-id"><strong>Order #{{ order.id }}</strong> - {{ order.package.name if order.package else 'N/A' }}</p>
-              {% if is_admin %}
-              <p class="order-user"><strong>User:</strong> {{ order.user.username }}</p>
-              {% endif %}
-              <p class="order-review"><strong>Review:</strong> {{ order.review if order.review else 'Not submitted yet' }}</p>
-              {% if is_admin and order.review_text %}
-              <p class="order-review-text"><strong>Review Comment:</strong> "{{ order.review_text }}"</p>
-              {% endif %}
-            </div>
+      <div class="order-user">
+        {% if order.user and order.user.avatar %}
+          <img src="{{ url_for('uploads', path=order.user.avatar) }}" alt="{{ order.user.username }}" class="order-avatar">
+        {% else %}
+          <div class="order-avatar">{{ order.user.username[0]|upper if order.user else 'U' }}</div>
+        {% endif %}
+        
+        <div class="order-user-info">
+          <div class="order-username">{{ order.user.username if order.user else 'Unknown' }}</div>
+          <div class="order-id">Order #{{ order.id }}</div>
         </div>
-        <a href="/order/{{ order.id }}" class="btn-view">View Order</a>
+      </div>
+      
+      <div class="order-package">{{ order.package.name if order.package else 'Package' }}</div>
+      
+      <div class="order-review">
+        {% if order.review %}
+        <div class="review-stars">
+          {% for i in range(5) %}
+            <span class="star {% if i >= order.review %}star-empty{% endif %}">★</span>
+          {% endfor %}
+        </div>
+        {% else %}
+        <span class="review-status">No review yet</span>
+        {% endif %}
+      </div>
+      
+      <div class="order-actions">
+        <a href="/order/{{ order.id }}" class="order-view-btn">
+          View Details
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+            <polyline points="12 5 19 12 12 19"></polyline>
+          </svg>
+        </a>
+      </div>
     </div>
-    {% else %}
-    <p class="no-orders">No completed orders yet.</p>
     {% endfor %}
+  </div>
+  {% else %}
+  <div style="text-align: center; padding: var(--space-16);">
+    <div style="width: 80px; height: 80px; background: var(--surface); border-radius: var(--radius-2xl); display: flex; align-items: center; justify-content: center; margin: 0 auto var(--space-6); font-size: var(--text-4xl);">✅</div>
+    <h3 style="font-size: var(--text-2xl); font-weight: 800; margin-bottom: var(--space-3);">No Completed Orders</h3>
+    <p style="color: var(--text-secondary);">Completed orders will appear here</p>
+  </div>
+  {% endif %}
 </div>
-
-<style>
-.page-title {
-    font-size: 1.8rem;
-    margin-bottom: 1.5rem;
-    color: #fff;
-}
-
-.orders-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 1.5rem;
-}
-
-.order-card {
-    background: #1f2937;
-    padding: 1.25rem;
-    border-radius: 12px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-    transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.order-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
-}
-
-.order-info p {
-    margin: 0.25rem 0;
-    color: #e5e7eb;
-    font-size: 0.9rem;
-}
-
-.order-id {
-    font-weight: 600;
-}
-
-.order-user, .order-review, .order-review-text {
-    color: #9ca3af;
-}
-
-.btn-view {
-    background: #3b82f6;
-    color: #fff;
-    padding: 0.5rem 1rem;
-    border-radius: 8px;
-    text-decoration: none;
-    font-weight: 500;
-    transition: background 0.2s;
-}
-
-.btn-view:hover {
-    background: #2563eb;
-}
-
-.no-orders {
-    color: #9ca3af;
-    font-style: italic;
-}
-</style>
 {% endblock %}

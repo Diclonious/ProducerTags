@@ -1,260 +1,492 @@
 {% extends "base.html" %}
-{% block title %}My Orders{% endblock %}
+{% block title %}My Orders - TaggedByBelle{% endblock %}
+
+{% block extra_css %}
+<style>
+  .dashboard-layout {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: var(--space-8);
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 0 var(--space-6);
+  }
+  
+  /* Sidebar */
+  .dashboard-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+  }
+  
+  .profile-card {
+    background: var(--surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-xl);
+    padding: var(--space-6);
+    text-align: center;
+  }
+  
+  .profile-avatar-large {
+    width: 100px;
+    height: 100px;
+    border-radius: var(--radius-2xl);
+    object-fit: cover;
+    border: 3px solid var(--border-default);
+    margin: 0 auto var(--space-4);
+    background: linear-gradient(135deg, var(--accent-purple) 0%, #6d28d9 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 800;
+    font-size: var(--text-3xl);
+  }
+  
+  .profile-name {
+    font-size: var(--text-xl);
+    font-weight: 800;
+    margin-bottom: var(--space-1);
+    color: var(--text-primary);
+  }
+  
+  .profile-handle {
+    color: var(--text-tertiary);
+    font-size: var(--text-sm);
+    margin-bottom: var(--space-5);
+  }
+  
+  .profile-action {
+    display: block;
+    width: 100%;
+    padding: var(--space-3) var(--space-4);
+    text-decoration: none;
+    color: var(--text-secondary);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    transition: all var(--transition-fast);
+  }
+  
+  .profile-action:hover {
+    background: var(--bg-tertiary);
+    border-color: var(--border-strong);
+    color: var(--text-primary);
+  }
+  
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-xl);
+    padding: var(--space-5);
+  }
+  
+  .stat-label {
+    font-size: var(--text-sm);
+    color: var(--text-tertiary);
+    margin-bottom: var(--space-2);
+  }
+  
+  .stat-value {
+    font-size: var(--text-3xl);
+    font-weight: 900;
+    color: var(--success);
+  }
+  
+  /* Main Content */
+  .dashboard-main {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+  }
+  
+  .dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+  }
+  
+  .dashboard-title {
+    font-size: var(--text-4xl);
+    font-weight: 900;
+    margin: 0;
+  }
+  
+  /* Filters */
+  .filters {
+    display: flex;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+  }
+  
+  .filter-tab {
+    padding: var(--space-2) var(--space-5);
+    background: var(--surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-full);
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+  
+  .filter-tab:hover {
+    background: var(--surface-hover);
+    border-color: var(--border-strong);
+  }
+  
+  .filter-tab.active {
+    background: var(--brand);
+    color: var(--text-inverse);
+    border-color: var(--brand);
+  }
+  
+  /* Orders Grid */
+  .orders-grid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+  
+  .order-card {
+    background: var(--surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-xl);
+    padding: var(--space-6);
+    display: flex;
+    align-items: center;
+    gap: var(--space-6);
+    transition: all var(--transition-base);
+  }
+  
+  .order-card:hover {
+    border-color: var(--border-strong);
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+  }
+  
+  .order-package {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-width: 200px;
+  }
+  
+  .order-package-icon {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, var(--accent-purple) 0%, #6d28d9 100%);
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--text-xl);
+    flex-shrink: 0;
+  }
+  
+  .order-package-info {
+    flex: 1;
+    min-width: 0;
+  }
+  
+  .order-package-name {
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+  }
+  
+  .order-package-id {
+    font-size: var(--text-xs);
+    color: var(--text-tertiary);
+  }
+  
+  .order-price {
+    font-size: var(--text-2xl);
+    font-weight: 800;
+    color: var(--text-primary);
+    min-width: 80px;
+    text-align: center;
+  }
+  
+  .order-time {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 140px;
+    padding: var(--space-2) var(--space-4);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+    font-weight: 600;
+  }
+  
+  .order-time.late {
+    background: var(--error-bg);
+    color: var(--error);
+  }
+  
+  .order-time.normal {
+    color: var(--text-secondary);
+  }
+  
+  .order-status {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 130px;
+  }
+  
+  .order-actions {
+    display: flex;
+    gap: var(--space-3);
+  }
+  
+  .order-view-btn {
+    padding: var(--space-3) var(--space-5);
+    background: var(--surface-hover);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    color: var(--text-primary);
+    text-decoration: none;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    transition: all var(--transition-fast);
+  }
+  
+  .order-view-btn:hover {
+    background: var(--bg-elevated);
+    border-color: var(--brand);
+    color: var(--brand);
+  }
+  
+  .empty-orders {
+    text-align: center;
+    padding: var(--space-16) var(--space-6);
+  }
+  
+  .empty-orders-icon {
+    width: 80px;
+    height: 80px;
+    background: var(--surface);
+    border-radius: var(--radius-2xl);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto var(--space-6);
+    font-size: var(--text-4xl);
+  }
+  
+  .empty-orders-title {
+    font-size: var(--text-2xl);
+    font-weight: 800;
+    margin-bottom: var(--space-3);
+  }
+  
+  .empty-orders-text {
+    color: var(--text-secondary);
+    margin-bottom: var(--space-6);
+  }
+  
+  /* Responsive */
+  @media (max-width: 1024px) {
+    .dashboard-layout {
+      grid-template-columns: 1fr;
+    }
+    
+    .dashboard-sidebar {
+      flex-direction: row;
+    }
+    
+    .order-card {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    
+    .order-package {
+      width: 100%;
+    }
+    
+    .order-actions {
+      width: 100%;
+    }
+    
+    .order-view-btn {
+      flex: 1;
+      text-align: center;
+    }
+  }
+  
+  @media (max-width: 768px) {
+    .dashboard-sidebar {
+      flex-direction: column;
+    }
+    
+    .dashboard-title {
+      font-size: var(--text-3xl);
+    }
+    
+    .order-price {
+      font-size: var(--text-xl);
+    }
+  }
+</style>
+{% endblock %}
 
 {% block content %}
-<style>
-.layout{display:grid;grid-template-columns:280px 1fr;gap:1.25rem;align-items:start}
-.sidebar .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:0 8px 28px rgba(0,0,0,0.28);padding:1rem}
-.profile{display:flex;flex-direction:column;align-items:center;text-align:center;gap:.6rem}
-.profile .avatar{width:96px;height:96px;border-radius:50%;object-fit:cover;border:1px solid rgba(255,255,255,.25);background:#0b1020;display:grid;place-items:center;color:#64748b;font-weight:800;font-size:1.4rem}
-.profile .name{font-weight:900;color:#fff}
-.profile .handle{color:var(--muted);font-size:.9rem}
-.profile .actions{display:flex;gap:.5rem;flex-wrap:wrap;justify-content:center}
-.profile .actions a{border:1px solid var(--line);border-radius:10px;padding:.45rem .75rem;text-decoration:none;color:#e5e7eb;display:inline-block;margin:0 auto}
-.profile .actions a:hover{background:rgba(255,255,255,0.06)}
-.section-title{font-weight:900;color:#fff;margin:0 0 .75rem 0}
-.tabs{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem}
-.tab{border:1px solid var(--line);border-radius:999px;padding:.35rem .8rem;color:var(--muted);cursor:pointer;transition:all 0.2s}
-.tab.active{background:var(--brand);color:var(--brand-ink);border-color:rgba(226,251,82,0.35)}
-.tab:hover:not(.active){background:rgba(255,255,255,0.05)}
-
-/* Order Cards - Matching Admin Style */
-.orders-grid{display:grid;grid-template-columns:1fr;gap:1rem}
-.order-card{background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;padding:1.5rem;display:flex;align-items:center;gap:2rem;box-shadow:0 1px 3px rgba(0,0,0,0.1);transition:box-shadow 0.2s}
-.order-card:hover{box-shadow:0 4px 6px rgba(0,0,0,0.1)}
-.order-user{display:flex;align-items:center;gap:0.75rem;min-width:140px}
-.user-avatar{width:36px;height:36px;border-radius:50%;object-fit:cover;background:#e5e7eb;display:flex;align-items:center;justify-content:center;color:#6b7280;font-weight:600;font-size:0.875rem;flex-shrink:0}
-.username{font-weight:500;color:#111827;font-size:0.9rem}
-.order-price{font-weight:600;color:#111827;min-width:60px;text-align:center;font-size:1rem}
-.delivery-time{display:flex;align-items:center;gap:0.5rem;min-width:120px;font-size:0.9rem}
-.delivery-time.late{color:#dc2626}
-.delivery-time.normal{color:#374151}
-.clock-icon{width:16px;height:16px}
-.order-status{min-width:120px;text-align:center}
-.status-badge{padding:0.4rem 1rem;border-radius:8px;font-weight:600;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.05em}
-.status-badge.in-revision{background:#fef2f2;color:#dc2626}
-.status-badge.in-progress{background:#eff6ff;color:#2563eb}
-.status-badge.delivered{background:#f0fdf4;color:#16a34a}
-.status-badge.completed{background:#f9fafb;color:#374151}
-.status-badge.late{background:#fef2f2;color:#dc2626}
-.status-badge.cancelled{background:#fef2f2;color:#dc2626}
-.status-badge.in-dispute{background:#faf5ff;color:#9333ea}
-.view-btn{color:#16a34a;text-decoration:none;font-weight:500;font-size:0.9rem;padding:0.5rem 1rem;border-radius:6px;transition:background-color 0.2s;min-width:80px;text-align:center}
-.view-btn:hover{background-color:#f0fdf4}
-
-/* Legacy styles for backward compatibility */
-.status.active { background: #f59e0b; }
-.status.revision { background: #3b82f6; }
-.status.delivered { background: #10b981; }
-.status.late { background: #ef4444; box-shadow: 0 0 0 2px rgba(239,68,68,0.25) inset; }
-.status.pending { background: #6b7280; }
-.status.completed { background: #10b981; }
-.status.cancelled { background: #ef4444; }
-.status.in-dispute { background: #a855f7; }
-</style>
-
-<div class="layout">
-  <aside class="sidebar">
-    <div class="card">
-      <div class="profile">
-        {% if request.session.get('avatar_url') %}
-          <img class="avatar" src="{{ request.session.get('avatar_url') }}" alt="{{ request.session.get('username') }}">
-        {% else %}
-          <div class="avatar">{{ request.session.get('username','U')[0]|upper }}</div>
-        {% endif %}
-        <div class="name">{{ request.session.get('username','User') }}</div>
-        <div class="handle">@{{ request.session.get('username','user')|lower }}</div>
-        <div class="actions">
-          <a href="/profile">View profile</a>
-        </div>
-      </div>
+<div class="dashboard-layout">
+  <!-- Sidebar -->
+  <aside class="dashboard-sidebar">
+    <div class="profile-card">
+      {% if request.session.get('avatar_url') %}
+        <img src="{{ request.session.get('avatar_url') }}" alt="{{ request.session.get('username') }}" class="profile-avatar-large">
+      {% else %}
+        <div class="profile-avatar-large">{{ request.session.get('username', 'U')[0]|upper }}</div>
+      {% endif %}
+      
+      <div class="profile-name">{{ request.session.get('username', 'User') }}</div>
+      <div class="profile-handle">@{{ request.session.get('username', 'user')|lower }}</div>
+      
+      <a href="/profile" class="profile-action">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+          <circle cx="12" cy="7" r="4"></circle>
+        </svg>
+        View Profile
+      </a>
     </div>
-    <div class="card" style="margin-top:1rem;display:flex;justify-content:space-between;align-items:center">
-      <div class="subtle">Spent in {{ month_name }}</div>
-      <div style="font-weight:900">€{{ '%.2f'|format(spent_month or 0.0) }}</div>
+    
+    <div class="stat-card">
+      <div class="stat-label">Spent in {{ month_name }}</div>
+      <div class="stat-value">€{{ '%.2f'|format(spent_month or 0.0) }}</div>
     </div>
   </aside>
-  <section>
-    <h2 class="section-title">My Orders</h2>
-
-<div class="tabs">
-  {% for s in ['Active','Revision','Late','Completed','Cancelled','In Dispute'] %}
-  <div class="tab{% if loop.first %} active{% endif %}" data-status="{{ s }}">{{ s }}</div>
-  {% endfor %}
-</div>
-
-<h3 class="section-title">All Orders</h3>
-<div class="orders-grid" id="ordersGrid">
-    {% for order in orders %}
-    <div class="order-card" data-status="{{ order.status }}" data-text="{{ order.package.name if order.package else '' }} #{{ order.id }}">
-        <!-- Package Info -->
-        <div class="order-user">
-            {% if order.user and order.user.avatar %}
-                <img class="user-avatar" src="{{ url_for('uploads', path=order.user.avatar) }}" alt="{{ order.user.username }}">
-            {% else %}
-                <div class="user-avatar">{{ order.user.username[0]|upper if order.user else 'U' }}</div>
-            {% endif %}
-            <span class="username">{{ order.package.name if order.package else 'Package' }}</span>
-        </div>
-        
-        <!-- Price -->
-        <div class="order-price">${{ order.package.price if order.package else 'N/A' }}</div>
-        
-        <!-- Delivery Time (only show for Active, Late, Revision orders - NOT Delivered) -->
-        {% if order.status in ['Active', 'Late', 'Revision'] %}
-        <div class="delivery-time {% if order.status == 'Late' %}late{% else %}normal{% endif %}">
-            <svg class="clock-icon" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path>
+  
+  <!-- Main Content -->
+  <main class="dashboard-main">
+    <div class="dashboard-header">
+      <h1 class="dashboard-title">My Orders</h1>
+    </div>
+    
+    <!-- Filters -->
+    <div class="filters" id="filters">
+      <button class="filter-tab active" data-status="Active">Active</button>
+      <button class="filter-tab" data-status="Revision">Revision</button>
+      <button class="filter-tab" data-status="Late">Late</button>
+      <button class="filter-tab" data-status="Delivered">Delivered</button>
+      <button class="filter-tab" data-status="Completed">Completed</button>
+      <button class="filter-tab" data-status="Cancelled">Cancelled</button>
+      <button class="filter-tab" data-status="In dispute">In Dispute</button>
+    </div>
+    
+    <!-- Orders List -->
+    <div class="orders-grid" id="ordersGrid">
+      {% if orders %}
+        {% for order in orders %}
+        <div class="order-card" data-status="{{ order.status }}">
+          <div class="order-package">
+            <div class="order-package-icon">📦</div>
+            <div class="order-package-info">
+              <div class="order-package-name">{{ order.package.name if order.package else 'Package' }}</div>
+              <div class="order-package-id">Order #{{ order.id }}</div>
+            </div>
+          </div>
+          
+          <div class="order-price">${{ order.package.price if order.package else 'N/A' }}</div>
+          
+          {% if order.status in ['Active', 'Late', 'Revision'] %}
+          <div class="order-time {% if order.status == 'Late' %}late{% else %}normal{% endif %}">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path>
             </svg>
             {% if order.status == 'Late' %}
-                Late
+              Late
             {% elif order.due_date %}
-                <span class="countdown" data-due="{{ order.due_date.isoformat() }}"></span>
+              <span data-countdown="{{ order.due_date.isoformat() }}"></span>
             {% else %}
-                N/A
+              N/A
             {% endif %}
-        </div>
-        {% else %}
-        <!-- Empty space for orders without delivery time -->
-        <div class="delivery-time" style="visibility: hidden;">
-            <svg class="clock-icon" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path>
-            </svg>
-            N/A
-        </div>
-        {% endif %}
-        
-        <!-- Status -->
-        <div class="order-status">
+          </div>
+          {% else %}
+          <div class="order-time" style="visibility: hidden;">—</div>
+          {% endif %}
+          
+          <div class="order-status">
             {% if order.status == 'Active' %}
-                <span class="status-badge in-progress">IN PROGRESS</span>
+              <span class="badge badge-active">Active</span>
             {% elif order.status == 'Revision' %}
-                <span class="status-badge in-revision">IN REVISION</span>
+              <span class="badge badge-revision">Revision</span>
             {% elif order.status == 'Delivered' %}
-                <span class="status-badge delivered">DELIVERED</span>
+              <span class="badge badge-delivered">Delivered</span>
             {% elif order.status == 'Completed' %}
-                <span class="status-badge completed">COMPLETED</span>
+              <span class="badge badge-completed">Completed</span>
             {% elif order.status == 'Late' %}
-                <span class="status-badge late">LATE</span>
+              <span class="badge badge-late">Late</span>
             {% elif order.status == 'Cancelled' %}
-                <span class="status-badge cancelled">CANCELLED</span>
+              <span class="badge badge-cancelled">Cancelled</span>
             {% elif order.status == 'In dispute' %}
-                <span class="status-badge in-dispute">IN DISPUTE</span>
+              <span class="badge badge-dispute">In Dispute</span>
             {% else %}
-                <span class="status-badge">{{ order.status }}</span>
+              <span class="badge">{{ order.status }}</span>
             {% endif %}
+          </div>
+          
+          <div class="order-actions">
+            <a href="/order/{{ order.id }}" class="order-view-btn">View Details</a>
+          </div>
         </div>
-        
-        <!-- View Button -->
-        <a href="/order/{{ order.id }}" class="view-btn">View</a>
+        {% endfor %}
+      {% else %}
+        <div class="empty-orders">
+          <div class="empty-orders-icon">📦</div>
+          <h3 class="empty-orders-title">No Orders Yet</h3>
+          <p class="empty-orders-text">Start your first order to see it here</p>
+          <a href="/order/new" class="btn btn-primary">Create Your First Order</a>
+        </div>
+      {% endif %}
     </div>
-    {% endfor %}
-    </div>
-  </section>
+  </main>
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Tab filtering functionality
-    const tabs = document.querySelectorAll('.tab');
-    const ordersGrid = document.getElementById('ordersGrid');
+  // Filter functionality
+  document.addEventListener('DOMContentLoaded', () => {
+    const filterTabs = document.querySelectorAll('.filter-tab');
     const orderCards = document.querySelectorAll('.order-card');
-
-    // Function to filter orders based on status
+    
     function filterOrders(status) {
-        orderCards.forEach(card => {
-            const cardStatus = card.dataset.status;
-            let shouldShow = false;
-            
-            switch(status) {
-                case 'Active':
-                    shouldShow = (cardStatus === 'Active' || cardStatus === 'Delivered');
-                    break;
-                case 'Revision':
-                    shouldShow = (cardStatus === 'Revision');
-                    break;
-                case 'Late':
-                    shouldShow = (cardStatus === 'Late');
-                    break;
-                case 'Completed':
-                    shouldShow = (cardStatus === 'Completed');
-                    break;
-                case 'Cancelled':
-                    shouldShow = (cardStatus === 'Cancelled');
-                    break;
-                case 'In Dispute':
-                    shouldShow = (cardStatus === 'In dispute');
-                    break;
-                default:
-                    shouldShow = false;
-            }
-            
-            card.style.display = shouldShow ? 'flex' : 'none';
-        });
+      orderCards.forEach(card => {
+        const cardStatus = card.getAttribute('data-status');
+        const shouldShow = 
+          (status === 'Active' && ['Active', 'Delivered'].includes(cardStatus)) ||
+          (status === 'Revision' && cardStatus === 'Revision') ||
+          (status === 'Late' && cardStatus === 'Late') ||
+          (status === 'Delivered' && cardStatus === 'Delivered') ||
+          (status === 'Completed' && cardStatus === 'Completed') ||
+          (status === 'Cancelled' && cardStatus === 'Cancelled') ||
+          (status === 'In dispute' && cardStatus === 'In dispute');
+        
+        card.style.display = shouldShow ? 'flex' : 'none';
+      });
     }
-
-    // Function to show all orders
-    function showAllOrders() {
-        orderCards.forEach(card => {
-            card.style.display = 'flex';
-        });
-    }
-
-    tabs.forEach(tab => {
-        tab.addEventListener('click', function() {
-            // Remove active class from all tabs
-            tabs.forEach(t => t.classList.remove('active'));
-            // Add active class to clicked tab
-            this.classList.add('active');
-            
-            const status = this.dataset.status;
-            filterOrders(status);
-        });
+    
+    filterTabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        filterTabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        filterOrders(tab.getAttribute('data-status'));
+      });
     });
-
-    // Apply filter based on active tab on page load
-    const activeTab = document.querySelector('.tab.active');
+    
+    // Apply initial filter
+    const activeTab = document.querySelector('.filter-tab.active');
     if (activeTab) {
-        const status = activeTab.dataset.status;
-        filterOrders(status);
-    } else {
-        // If no active tab, default to showing Active orders
-        const activeTabElement = document.querySelector('.tab[data-status="Active"]');
-        if (activeTabElement) {
-            activeTabElement.classList.add('active');
-            filterOrders('Active');
-        } else {
-            showAllOrders();
-        }
+      filterOrders(activeTab.getAttribute('data-status'));
     }
-
-    // Countdown timer functionality
-    function updateCountdowns() {
-        const countdownElements = document.querySelectorAll('.countdown');
-        countdownElements.forEach(element => {
-            const dueDate = new Date(element.dataset.due);
-            const now = new Date();
-            const diff = dueDate - now;
-            
-            if (diff < 0) {
-                element.textContent = 'Overdue';
-                element.style.color = '#dc2626';
-                return;
-            }
-            
-            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-            
-            element.textContent = `${days}d ${hours}h ${minutes}m ${seconds}s`;
-        });
-    }
-
-    // Update countdowns every second
-    updateCountdowns();
-    setInterval(updateCountdowns, 1000);
-});
+  });
 </script>
-
 {% endblock %}

@@ -1,108 +1,323 @@
 {% extends "base.html" %}
+{% block title %}Sign Up - TaggedByBelle{% endblock %}
 
-{% block title %}Sign Up{% endblock %}
-
-{% block content %}
-<div class="signup-container">
-    <div class="signup-card">
-        <h2 class="page-title">Sign Up</h2>
-        {% if error %}
-        <div class="error-message">{{ error }}</div>
-        {% endif %}
-
-        <form method="post" action="/signup" class="signup-form">
-            <div class="form-group">
-                <label for="username">Username</label>
-                <input type="text" id="username" name="username" placeholder="Choose a username" required>
-            </div>
-
-            <div class="form-group">
-                <label for="email">Email</label>
-                <input type="email" id="email" name="email" placeholder="Enter your email" required>
-            </div>
-
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" placeholder="Create a password" required>
-            </div>
-
-            <button type="submit" class="btn-submit">Create Account</button>
-        </form>
-    </div>
-</div>
-
+{% block extra_css %}
 <style>
-.signup-container {
+  .auth-container {
+    min-height: calc(100vh - 72px);
     display: flex;
-    justify-content: center;
     align-items: center;
-    min-height: 80vh;
-    padding: 1rem;
-}
-
-.signup-card {
-    background: #1f2937;
-    padding: 2rem;
-    border-radius: 12px;
+    justify-content: center;
+    padding: var(--space-8) var(--space-6);
+  }
+  
+  .auth-card {
     width: 100%;
-    max-width: 400px;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
-}
-
-.page-title {
-    font-size: 1.8rem;
-    margin-bottom: 1rem;
-    color: #fff;
+    max-width: 440px;
+    background: var(--surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-2xl);
+    padding: var(--space-10);
+    box-shadow: var(--shadow-2xl);
+    animation: fadeInUp 0.6s ease-out;
+  }
+  
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  .auth-header {
     text-align: center;
-}
-
-.error-message {
-    color: #f87171;
-    margin-bottom: 1rem;
-    text-align: center;
-}
-
-.signup-form .form-group {
+    margin-bottom: var(--space-8);
+  }
+  
+  .auth-logo {
+    width: 56px;
+    height: 56px;
+    background: linear-gradient(135deg, var(--brand) 0%, #b8d633 100%);
+    border-radius: var(--radius-xl);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: var(--text-2xl);
+    color: var(--text-inverse);
+    margin: 0 auto var(--space-4);
+    box-shadow: 0 0 30px rgba(226, 251, 82, 0.3);
+  }
+  
+  .auth-title {
+    font-size: var(--text-3xl);
+    font-weight: 900;
+    margin-bottom: var(--space-2);
+    color: var(--text-primary);
+  }
+  
+  .auth-subtitle {
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+  }
+  
+  .auth-form {
     display: flex;
     flex-direction: column;
-    margin-bottom: 1rem;
-}
-
-.signup-form label {
-    font-weight: 500;
-    margin-bottom: 0.25rem;
-    color: #e5e7eb;
-}
-
-.signup-form input {
-    padding: 0.5rem;
-    border-radius: 8px;
-    border: 1px solid #374151;
-    background: #111827;
-    color: #fff;
-    font-size: 0.95rem;
-    transition: border 0.2s;
-}
-
-.signup-form input:focus {
-    outline: none;
-    border-color: #3b82f6;
-}
-
-.btn-submit {
-    width: 100%;
-    padding: 0.6rem;
-    border-radius: 8px;
-    background: #3b82f6;
-    color: #fff;
+    gap: var(--space-5);
+  }
+  
+  .form-group {
+    margin-bottom: 0;
+  }
+  
+  .form-label {
+    display: block;
+    font-size: var(--text-sm);
     font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--space-2);
+  }
+  
+  .form-input {
+    width: 100%;
+    padding: var(--space-3) var(--space-4);
+    font-size: var(--text-base);
+    color: var(--text-primary);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    transition: all var(--transition-fast);
+  }
+  
+  .form-input:focus {
+    outline: none;
+    border-color: var(--brand);
+    box-shadow: 0 0 0 3px rgba(226, 251, 82, 0.1);
+    background: var(--bg-tertiary);
+  }
+  
+  .form-input::placeholder {
+    color: var(--text-tertiary);
+  }
+  
+  .password-strength {
+    height: 4px;
+    background: var(--surface-hover);
+    border-radius: var(--radius-full);
+    margin-top: var(--space-2);
+    overflow: hidden;
+  }
+  
+  .password-strength-bar {
+    height: 100%;
+    background: var(--error);
+    transition: all var(--transition-base);
+    width: 0;
+  }
+  
+  .password-strength-bar.weak { width: 33%; background: var(--error); }
+  .password-strength-bar.medium { width: 66%; background: var(--warning); }
+  .password-strength-bar.strong { width: 100%; background: var(--success); }
+  
+  .auth-submit {
+    width: 100%;
+    padding: var(--space-4);
+    font-size: var(--text-base);
+    font-weight: 700;
+    background: var(--brand);
+    color: var(--text-inverse);
     border: none;
+    border-radius: var(--radius-lg);
     cursor: pointer;
-    transition: background 0.2s;
-}
-
-.btn-submit:hover {
-    background: #2563eb;
-}
+    transition: all var(--transition-base);
+    margin-top: var(--space-2);
+  }
+  
+  .auth-submit:hover {
+    background: var(--brand-hover);
+    box-shadow: 0 0 30px rgba(226, 251, 82, 0.4);
+    transform: translateY(-2px);
+  }
+  
+  .auth-submit:active {
+    transform: translateY(0);
+  }
+  
+  .auth-footer {
+    margin-top: var(--space-6);
+    padding-top: var(--space-6);
+    border-top: 1px solid var(--border-subtle);
+    text-align: center;
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+  }
+  
+  .auth-footer a {
+    color: var(--brand);
+    font-weight: 600;
+    text-decoration: none;
+    transition: color var(--transition-fast);
+  }
+  
+  .auth-footer a:hover {
+    color: var(--brand-hover);
+  }
+  
+  .error-message {
+    padding: var(--space-4);
+    background: var(--error-bg);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: var(--radius-lg);
+    color: #f87171;
+    font-size: var(--text-sm);
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    animation: shake 0.4s ease-out;
+  }
+  
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-10px); }
+    75% { transform: translateX(10px); }
+  }
+  
+  .error-icon {
+    font-size: var(--text-xl);
+    flex-shrink: 0;
+  }
+  
+  .terms-notice {
+    font-size: var(--text-xs);
+    color: var(--text-tertiary);
+    text-align: center;
+    line-height: var(--leading-relaxed);
+  }
+  
+  .terms-notice a {
+    color: var(--text-secondary);
+    text-decoration: underline;
+  }
+  
+  .terms-notice a:hover {
+    color: var(--text-primary);
+  }
+  
+  @media (max-width: 480px) {
+    .auth-card {
+      padding: var(--space-6);
+    }
+    
+    .auth-title {
+      font-size: var(--text-2xl);
+    }
+  }
 </style>
+{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+  <div class="auth-card">
+    <div class="auth-header">
+      <div class="auth-logo">TB</div>
+      <h1 class="auth-title">Create Account</h1>
+      <p class="auth-subtitle">Join TaggedByBelle and start creating</p>
+    </div>
+    
+    {% if error %}
+    <div class="error-message">
+      <span class="error-icon">⚠</span>
+      <span>{{ error }}</span>
+    </div>
+    {% endif %}
+    
+    <form method="post" action="/signup" class="auth-form">
+      <div class="form-group">
+        <label for="username" class="form-label">Username</label>
+        <input 
+          type="text" 
+          id="username" 
+          name="username" 
+          class="form-input"
+          placeholder="Choose a username"
+          required
+          autofocus
+          minlength="3"
+        >
+      </div>
+      
+      <div class="form-group">
+        <label for="email" class="form-label">Email</label>
+        <input 
+          type="email" 
+          id="email" 
+          name="email" 
+          class="form-input"
+          placeholder="your.email@example.com"
+          required
+        >
+      </div>
+      
+      <div class="form-group">
+        <label for="password" class="form-label">Password</label>
+        <input 
+          type="password" 
+          id="password" 
+          name="password" 
+          class="form-input"
+          placeholder="Create a strong password"
+          required
+          minlength="6"
+        >
+        <div class="password-strength">
+          <div class="password-strength-bar" id="passwordStrengthBar"></div>
+        </div>
+      </div>
+      
+      <div class="terms-notice">
+        By creating an account, you agree to our <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>
+      </div>
+      
+      <button type="submit" class="auth-submit">
+        Create Account
+      </button>
+    </form>
+    
+    <div class="auth-footer">
+      Already have an account? <a href="/login">Log in</a>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Password strength indicator
+  const passwordInput = document.getElementById('password');
+  const strengthBar = document.getElementById('passwordStrengthBar');
+  
+  passwordInput.addEventListener('input', function() {
+    const password = this.value;
+    let strength = 0;
+    
+    if (password.length >= 6) strength++;
+    if (password.length >= 10) strength++;
+    if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength++;
+    if (/[0-9]/.test(password)) strength++;
+    if (/[^a-zA-Z0-9]/.test(password)) strength++;
+    
+    strengthBar.className = 'password-strength-bar';
+    
+    if (strength <= 2) {
+      strengthBar.classList.add('weak');
+    } else if (strength <= 3) {
+      strengthBar.classList.add('medium');
+    } else {
+      strengthBar.classList.add('strong');
+    }
+  });
+</script>
 {% endblock %}

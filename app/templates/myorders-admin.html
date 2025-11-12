@@ -1,199 +1,481 @@
 {% extends "base.html" %}
-{% block title %}Dashboard{% endblock %}
+{% block title %}Admin Dashboard - TaggedByBelle{% endblock %}
+
+{% block extra_css %}
+<style>
+  .dashboard-layout {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: var(--space-8);
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 0 var(--space-6);
+  }
+  
+  .dashboard-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+  }
+  
+  .profile-card {
+    background: var(--surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-xl);
+    padding: var(--space-6);
+    text-align: center;
+  }
+  
+  .profile-avatar-large {
+    width: 100px;
+    height: 100px;
+    border-radius: var(--radius-2xl);
+    object-fit: cover;
+    border: 3px solid var(--brand);
+    margin: 0 auto var(--space-4);
+    background: linear-gradient(135deg, var(--brand) 0%, #b8d633 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-inverse);
+    font-weight: 800;
+    font-size: var(--text-3xl);
+    box-shadow: var(--glow-brand);
+  }
+  
+  .admin-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-1) var(--space-3);
+    background: linear-gradient(135deg, var(--brand) 0%, #b8d633 100%);
+    color: var(--text-inverse);
+    border-radius: var(--radius-full);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: var(--space-4);
+  }
+  
+  .profile-name {
+    font-size: var(--text-xl);
+    font-weight: 800;
+    margin-bottom: var(--space-1);
+    color: var(--text-primary);
+  }
+  
+  .profile-handle {
+    color: var(--text-tertiary);
+    font-size: var(--text-sm);
+    margin-bottom: var(--space-5);
+  }
+  
+  .profile-action {
+    display: block;
+    width: 100%;
+    padding: var(--space-3) var(--space-4);
+    text-decoration: none;
+    color: var(--text-secondary);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    transition: all var(--transition-fast);
+  }
+  
+  .profile-action:hover {
+    background: var(--bg-tertiary);
+    border-color: var(--border-strong);
+    color: var(--text-primary);
+  }
+  
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-xl);
+    padding: var(--space-5);
+  }
+  
+  .stat-label {
+    font-size: var(--text-sm);
+    color: var(--text-tertiary);
+    margin-bottom: var(--space-2);
+  }
+  
+  .stat-value {
+    font-size: var(--text-3xl);
+    font-weight: 900;
+    color: var(--brand);
+  }
+  
+  .dashboard-main {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+  }
+  
+  .dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+  }
+  
+  .dashboard-title {
+    font-size: var(--text-4xl);
+    font-weight: 900;
+    margin: 0;
+  }
+  
+  .filters {
+    display: flex;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+  }
+  
+  .filter-tab {
+    padding: var(--space-2) var(--space-5);
+    background: var(--surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-full);
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+  
+  .filter-tab:hover {
+    background: var(--surface-hover);
+    border-color: var(--border-strong);
+  }
+  
+  .filter-tab.active {
+    background: var(--brand);
+    color: var(--text-inverse);
+    border-color: var(--brand);
+  }
+  
+  .orders-grid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+  
+  .order-card {
+    background: var(--surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-xl);
+    padding: var(--space-6);
+    display: flex;
+    align-items: center;
+    gap: var(--space-6);
+    transition: all var(--transition-base);
+  }
+  
+  .order-card:hover {
+    border-color: var(--border-strong);
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+  }
+  
+  .order-user {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-width: 180px;
+  }
+  
+  .order-user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-lg);
+    object-fit: cover;
+    background: linear-gradient(135deg, var(--accent-purple) 0%, #6d28d9 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  
+  .order-user-info {
+    flex: 1;
+    min-width: 0;
+  }
+  
+  .order-username {
+    font-weight: 700;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .order-id {
+    font-size: var(--text-xs);
+    color: var(--text-tertiary);
+  }
+  
+  .order-price {
+    font-size: var(--text-2xl);
+    font-weight: 800;
+    color: var(--text-primary);
+    min-width: 80px;
+    text-align: center;
+  }
+  
+  .order-time {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 140px;
+    padding: var(--space-2) var(--space-4);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+    font-weight: 600;
+  }
+  
+  .order-time.late {
+    background: var(--error-bg);
+    color: var(--error);
+  }
+  
+  .order-time.normal {
+    color: var(--text-secondary);
+  }
+  
+  .order-status {
+    min-width: 130px;
+  }
+  
+  .order-actions {
+    display: flex;
+    gap: var(--space-3);
+  }
+  
+  .order-view-btn {
+    padding: var(--space-3) var(--space-5);
+    background: var(--surface-hover);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    color: var(--text-primary);
+    text-decoration: none;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    transition: all var(--transition-fast);
+  }
+  
+  .order-view-btn:hover {
+    background: var(--bg-elevated);
+    border-color: var(--brand);
+    color: var(--brand);
+  }
+  
+  @media (max-width: 1024px) {
+    .dashboard-layout {
+      grid-template-columns: 1fr;
+    }
+    
+    .dashboard-sidebar {
+      flex-direction: row;
+    }
+    
+    .order-card {
+      flex-wrap: wrap;
+    }
+  }
+  
+  @media (max-width: 768px) {
+    .dashboard-sidebar {
+      flex-direction: column;
+    }
+    
+    .dashboard-title {
+      font-size: var(--text-3xl);
+    }
+    
+    .order-card {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    
+    .order-user,
+    .order-actions {
+      width: 100%;
+    }
+  }
+</style>
+{% endblock %}
 
 {% block content %}
-<style>
-.layout{display:grid;grid-template-columns:280px 1fr;gap:1.25rem;align-items:start}
-.sidebar .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:0 8px 28px rgba(0,0,0,0.28);padding:1rem}
-.profile{display:flex;flex-direction:column;align-items:center;text-align:center;gap:.6rem}
-.profile .avatar{width:96px;height:96px;border-radius:50%;object-fit:cover;border:1px solid rgba(255,255,255,.25);background:#0b1020;display:grid;place-items:center;color:#64748b;font-weight:800;font-size:1.4rem}
-.profile .name{font-weight:900;color:#fff}
-.profile .handle{color:var(--muted);font-size:.9rem}
-.profile .actions{display:flex;gap:.5rem;flex-wrap:wrap;justify-content:center}
-.profile .actions a{border:1px solid var(--line);border-radius:10px;padding:.45rem .75rem;text-decoration:none;color:#e5e7eb}
-.profile .actions a:hover{background:rgba(255,255,255,0.06)}
-.section-title{font-weight:900;color:#fff;margin:0 0 .75rem 0}
-</style>
-
-<div class="layout">
-  <aside class="sidebar">
-    <div class="card">
-      <div class="profile">
-        {% if request.session.get('avatar_url') %}
-          <img class="avatar" src="{{ request.session.get('avatar_url') }}" alt="{{ request.session.get('username') }}">
-        {% else %}
-          <div class="avatar">{{ request.session.get('username','U')[0]|upper }}</div>
-        {% endif %}
-        <div class="name">{{ request.session.get('username','User') }}</div>
-        <div class="handle">@{{ request.session.get('username','user')|lower }}</div>
-        <div class="actions">
-          <a href="/profile" style="display:block;text-align:center;border:1px solid var(--line);border-radius:10px;padding:.45rem .75rem;text-decoration:none;color:#e5e7eb;width:100%;box-sizing:border-box">View profile</a>
-        </div>
+<div class="dashboard-layout">
+  <aside class="dashboard-sidebar">
+    <div class="profile-card">
+      <div class="admin-badge">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+        </svg>
+        Admin
       </div>
+      
+      {% if request.session.get('avatar_url') %}
+        <img src="{{ request.session.get('avatar_url') }}" alt="{{ request.session.get('username') }}" class="profile-avatar-large">
+      {% else %}
+        <div class="profile-avatar-large">{{ request.session.get('username', 'A')[0]|upper }}</div>
+      {% endif %}
+      
+      <div class="profile-name">{{ request.session.get('username', 'Admin') }}</div>
+      <div class="profile-handle">@{{ request.session.get('username', 'admin')|lower }}</div>
+      
+      <a href="/profile" class="profile-action">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+          <circle cx="12" cy="7" r="4"></circle>
+        </svg>
+        View Profile
+      </a>
     </div>
-    <div class="card" style="margin-top:1rem;display:flex;justify-content:space-between;align-items:center">
-      <div class="subtle">Earned in {{ month_name }}</div>
-      <div style="font-weight:900">€{{ '%.2f'|format(earned_month or 0.0) }}</div>
+    
+    <div class="stat-card">
+      <div class="stat-label">Earned in {{ month_name }}</div>
+      <div class="stat-value">€{{ '%.2f'|format(earned_month or 0.0) }}</div>
     </div>
   </aside>
-  <section>
-{% set total = orders|length %}
-{% set active = orders|selectattr('status','equalto','Active')|list|length %}
-{% set revision = orders|selectattr('status','equalto','Revision')|list|length %}
-{% set delivered = orders|selectattr('status','equalto','Delivered')|list|length %}
-{% set late = orders|selectattr('status','equalto','Late')|list|length %}
-{% set completed = orders|selectattr('status','equalto','Completed')|list|length %}
-
-<style>
-.dash-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem}
-.dash-title{font-weight:900;color:#fff;margin:0;font-size:1.6rem}
-.kpis,.kpi{display:none}
-.toolbar{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem}
-.toolbar input{background:#0b1020;border:1px solid var(--line);border-radius:10px;color:#fff;padding:.55rem .7rem}
-.tabs{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem}
-.tab{border:1px solid var(--line);border-radius:999px;padding:.35rem .8rem;color:var(--muted);cursor:pointer}
-.tab.active{background:var(--brand);color:var(--brand-ink);border-color:rgba(226,251,82,0.35)}
-.grid{display:grid;grid-template-columns:1fr;gap:1rem}
-.order-card{background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;padding:1.5rem;display:flex;align-items:center;gap:2rem;box-shadow:0 1px 3px rgba(0,0,0,0.1);transition:box-shadow 0.2s}
-.order-card:hover{box-shadow:0 4px 6px rgba(0,0,0,0.1)}
-.order-thumbnail{width:60px;height:40px;border-radius:6px;object-fit:cover;background:#f3f4f6;display:flex;align-items:center;justify-content:center;color:#6b7280;font-size:0.75rem;flex-shrink:0}
-.order-user{display:flex;align-items:center;gap:0.75rem;min-width:140px}
-.user-avatar{width:36px;height:36px;border-radius:50%;object-fit:cover;background:#e5e7eb;display:flex;align-items:center;justify-content:center;color:#6b7280;font-weight:600;font-size:0.875rem;flex-shrink:0}
-.username{font-weight:500;color:#111827;font-size:0.9rem}
-.order-price{font-weight:600;color:#111827;min-width:60px;text-align:center;font-size:1rem}
-.delivery-time{display:flex;align-items:center;gap:0.5rem;min-width:120px;font-size:0.9rem}
-.delivery-time.late{color:#dc2626}
-.delivery-time.normal{color:#374151}
-.clock-icon{width:16px;height:16px}
-.order-status{min-width:120px;text-align:center}
-.status-badge{padding:0.4rem 1rem;border-radius:8px;font-weight:600;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.05em}
-.status-badge.in-revision{background:#fef2f2;color:#dc2626}
-.status-badge.in-progress{background:#eff6ff;color:#2563eb}
-.status-badge.delivered{background:#f0fdf4;color:#16a34a}
-.status-badge.completed{background:#f9fafb;color:#374151}
-.status-badge.late{background:#fef2f2;color:#dc2626}
-.status-badge.cancelled{background:#fef2f2;color:#dc2626}
-.status-badge.in-dispute{background:#faf5ff;color:#9333ea}
-.view-btn{color:#16a34a;text-decoration:none;font-weight:500;font-size:0.9rem;padding:0.5rem 1rem;border-radius:6px;transition:background-color 0.2s;min-width:80px;text-align:center}
-.view-btn:hover{background-color:#f0fdf4}
-.empty{color:var(--muted)}
-</style>
-
-<div class="dash-head">
-  <h2 class="dash-title">Seller Dashboard</h2>
-</div>
-
-<div class="tabs">
-  {% for s in ['Active','Revision','Late','Completed','Cancelled'] %}
-  <div class="tab{% if loop.first %} active{% endif %}" data-status="{{ s }}">{{ s }}</div>
-  {% endfor %}
-  </div>
-
-<h3 class="section-title">Active orders</h3>
-<div class="grid" id="ordersGrid">
-  {% for order in orders %}
-  <div class="order-card" data-status="{{ order.status }}" data-text="{{ order.user.username }} {{ order.package.name if order.package else '' }} #{{ order.id }}">
-    <!-- User Info -->
-    <div class="order-user">
-      {% if order.user.avatar %}
-        <img class="user-avatar" src="{{ url_for('uploads', path=order.user.avatar) }}" alt="{{ order.user.username }}">
-      {% else %}
-        <div class="user-avatar">{{ order.user.username[0]|upper }}</div>
-      {% endif %}
-      <span class="username">{{ order.user.username }}</span>
+  
+  <main class="dashboard-main">
+    <div class="dashboard-header">
+      <h1 class="dashboard-title">All Orders</h1>
+      <a href="/analytics" class="btn btn-primary">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="20" x2="18" y2="10"></line>
+          <line x1="12" y1="20" x2="12" y2="4"></line>
+          <line x1="6" y1="20" x2="6" y2="14"></line>
+        </svg>
+        Analytics
+      </a>
     </div>
     
-    <!-- Price -->
-    <div class="order-price">${{ order.package.price if order.package else 'N/A' }}</div>
-    
-    <!-- Delivery Time (only show for Active, Late, Revision orders - NOT Delivered) -->
-    {% if order.status in ['Active', 'Late', 'Revision'] %}
-    <div class="delivery-time {% if order.status == 'Late' %}late{% else %}normal{% endif %}">
-      <svg class="clock-icon" fill="currentColor" viewBox="0 0 20 20">
-        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path>
-      </svg>
-      {% if order.status == 'Late' %}
-        Late
-      {% elif order.due_date %}
-        <span class="countdown" data-due="{{ order.due_date.isoformat() }}"></span>
-      {% else %}
-        N/A
-      {% endif %}
+    <div class="filters">
+      <button class="filter-tab active" data-status="Active">Active</button>
+      <button class="filter-tab" data-status="Revision">Revision</button>
+      <button class="filter-tab" data-status="Late">Late</button>
+      <button class="filter-tab" data-status="Delivered">Delivered</button>
+      <button class="filter-tab" data-status="Completed">Completed</button>
+      <button class="filter-tab" data-status="Cancelled">Cancelled</button>
+      <button class="filter-tab" data-status="In dispute">In Dispute</button>
     </div>
-    {% else %}
-    <!-- Empty space for orders without delivery time -->
-    <div class="delivery-time" style="visibility: hidden;">
-      <svg class="clock-icon" fill="currentColor" viewBox="0 0 20 20">
-        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path>
-      </svg>
-      N/A
-    </div>
-    {% endif %}
     
-    <!-- Status -->
-    <div class="order-status">
-      {% if order.status == 'Active' %}
-        <span class="status-badge in-progress">IN PROGRESS</span>
-      {% elif order.status == 'Revision' %}
-        <span class="status-badge in-revision">IN REVISION</span>
-      {% elif order.status == 'Delivered' %}
-        <span class="status-badge delivered">DELIVERED</span>
-      {% elif order.status == 'Completed' %}
-        <span class="status-badge completed">COMPLETED</span>
-      {% elif order.status == 'Late' %}
-        <span class="status-badge late">LATE</span>
-      {% elif order.status == 'Cancelled' %}
-        <span class="status-badge cancelled">CANCELLED</span>
-      {% elif order.status == 'In dispute' %}
-        <span class="status-badge in-dispute">IN DISPUTE</span>
+    <div class="orders-grid" id="ordersGrid">
+      {% if orders %}
+        {% for order in orders %}
+        <div class="order-card" data-status="{{ order.status }}">
+          <div class="order-user">
+            {% if order.user and order.user.avatar %}
+              <img src="{{ url_for('uploads', path=order.user.avatar) }}" alt="{{ order.user.username }}" class="order-user-avatar">
+            {% else %}
+              <div class="order-user-avatar">{{ order.user.username[0]|upper if order.user else 'U' }}</div>
+            {% endif %}
+            
+            <div class="order-user-info">
+              <div class="order-username">{{ order.user.username if order.user else 'Unknown' }}</div>
+              <div class="order-id">Order #{{ order.id }}</div>
+            </div>
+          </div>
+          
+          <div class="order-price">${{ order.package.price if order.package else 'N/A' }}</div>
+          
+          {% if order.status in ['Active', 'Late', 'Revision'] %}
+          <div class="order-time {% if order.status == 'Late' %}late{% else %}normal{% endif %}">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path>
+            </svg>
+            {% if order.status == 'Late' %}
+              Late
+            {% elif order.due_date %}
+              <span data-countdown="{{ order.due_date.isoformat() }}"></span>
+            {% else %}
+              N/A
+            {% endif %}
+          </div>
+          {% else %}
+          <div class="order-time" style="visibility: hidden;">—</div>
+          {% endif %}
+          
+          <div class="order-status">
+            {% if order.status == 'Active' %}
+              <span class="badge badge-active">Active</span>
+            {% elif order.status == 'Revision' %}
+              <span class="badge badge-revision">Revision</span>
+            {% elif order.status == 'Delivered' %}
+              <span class="badge badge-delivered">Delivered</span>
+            {% elif order.status == 'Completed' %}
+              <span class="badge badge-completed">Completed</span>
+            {% elif order.status == 'Late' %}
+              <span class="badge badge-late">Late</span>
+            {% elif order.status == 'Cancelled' %}
+              <span class="badge badge-cancelled">Cancelled</span>
+            {% elif order.status == 'In dispute' %}
+              <span class="badge badge-dispute">In Dispute</span>
+            {% else %}
+              <span class="badge">{{ order.status }}</span>
+            {% endif %}
+          </div>
+          
+          <div class="order-actions">
+            <a href="/order/{{ order.id }}" class="order-view-btn">View Details</a>
+          </div>
+        </div>
+        {% endfor %}
       {% else %}
-        <span class="status-badge">{{ order.status }}</span>
+        <div class="empty-orders">
+          <div class="empty-orders-icon">📦</div>
+          <h3 class="empty-orders-title">No Orders Yet</h3>
+          <p class="empty-orders-text">Orders will appear here once customers place them</p>
+        </div>
       {% endif %}
     </div>
-    
-    <!-- View Button -->
-    <a href="/order/{{ order.id }}" class="view-btn">View</a>
-  </div>
-  {% else %}
-  <p class="empty">No orders yet.</p>
-  {% endfor %}
+  </main>
 </div>
 
 <script>
-function updateCountdowns(){
-  document.querySelectorAll('.countdown').forEach(el=>{
-    const due=new Date(el.dataset.due);const now=new Date();let d=Math.floor((due-now)/1000);
-    if(d<=0){el.textContent='Late';return;}const days=Math.floor(d/86400);d%=86400;const h=Math.floor(d/3600);d%=3600;const m=Math.floor(d/60);const s=d%60;
-    el.textContent=`${days?days+'d ':''}${h}h ${m}m ${s}s`;
-  });
-}
-setInterval(updateCountdowns,1000);updateCountdowns();
-
-// Filtering
-const tabs=document.querySelectorAll('.tab');
-const grid=document.getElementById('ordersGrid');
-function applyFilters(){
-  const activeTab=document.querySelector('.tab.active');
-  const status=activeTab?activeTab.dataset.status:'All';
-  grid.querySelectorAll('.order-card').forEach(card=>{
-    const cardStatus = card.dataset.status;
-    let matchStatus = false;
+  document.addEventListener('DOMContentLoaded', () => {
+    const filterTabs = document.querySelectorAll('.filter-tab');
+    const orderCards = document.querySelectorAll('.order-card');
     
-    if (status === 'All') {
-      matchStatus = true;
-    } else if (status === 'Active') {
-      // Include Active, Delivered, and In dispute orders in Active tab
-      matchStatus = cardStatus === 'Active' || cardStatus === 'Delivered' || cardStatus === 'In dispute';
-    } else {
-      matchStatus = cardStatus === status;
+    function filterOrders(status) {
+      orderCards.forEach(card => {
+        const cardStatus = card.getAttribute('data-status');
+        const shouldShow = 
+          (status === 'Active' && ['Active', 'Delivered'].includes(cardStatus)) ||
+          (status === 'Revision' && cardStatus === 'Revision') ||
+          (status === 'Late' && cardStatus === 'Late') ||
+          (status === 'Delivered' && cardStatus === 'Delivered') ||
+          (status === 'Completed' && cardStatus === 'Completed') ||
+          (status === 'Cancelled' && cardStatus === 'Cancelled') ||
+          (status === 'In dispute' && cardStatus === 'In dispute');
+        
+        card.style.display = shouldShow ? 'flex' : 'none';
+      });
     }
     
-    card.style.display = matchStatus ? '' : 'none';
+    filterTabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        filterTabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        filterOrders(tab.getAttribute('data-status'));
+      });
+    });
+    
+    const activeTab = document.querySelector('.filter-tab.active');
+    if (activeTab) {
+      filterOrders(activeTab.getAttribute('data-status'));
+    }
   });
-}
-tabs.forEach(t=>t.addEventListener('click',()=>{tabs.forEach(x=>x.classList.remove('active'));t.classList.add('active');applyFilters();}));
-applyFilters();
 </script>
-  </section>
-</div>
 {% endblock %}

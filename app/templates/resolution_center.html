@@ -1,265 +1,345 @@
 {% extends "base.html" %}
 {% block title %}Resolution Center - Order #{{ order.id }}{% endblock %}
 
+{% block extra_css %}
+<style>
+  .resolution-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 0 var(--space-6);
+  }
+  
+  .resolution-header {
+    text-align: center;
+    margin-bottom: var(--space-10);
+  }
+  
+  .resolution-icon {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, var(--accent-purple) 0%, #6d28d9 100%);
+    border-radius: var(--radius-2xl);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto var(--space-6);
+    box-shadow: 0 0 40px rgba(124, 58, 237, 0.3);
+  }
+  
+  .resolution-title {
+    font-size: var(--text-4xl);
+    font-weight: 900;
+    margin-bottom: var(--space-3);
+  }
+  
+  .resolution-subtitle {
+    font-size: var(--text-lg);
+    color: var(--text-secondary);
+  }
+  
+  .resolution-card {
+    background: var(--surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-2xl);
+    padding: var(--space-8);
+    box-shadow: var(--shadow-xl);
+  }
+  
+  .section-title {
+    font-size: var(--text-2xl);
+    font-weight: 800;
+    margin-bottom: var(--space-6);
+    text-align: center;
+  }
+  
+  .request-type-cards {
+    display: grid;
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
+  }
+  
+  .request-type-card {
+    padding: var(--space-5);
+    background: var(--bg-secondary);
+    border: 2px solid var(--border-default);
+    border-radius: var(--radius-xl);
+    cursor: pointer;
+    transition: all var(--transition-base);
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+  }
+  
+  .request-type-card:hover {
+    border-color: var(--brand);
+    background: var(--bg-tertiary);
+  }
+  
+  .request-type-card.selected {
+    border-color: var(--brand);
+    background: var(--brand-subtle);
+  }
+  
+  .request-icon {
+    width: 48px;
+    height: 48px;
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  
+  .request-info {
+    flex: 1;
+  }
+  
+  .request-title {
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: var(--space-1);
+  }
+  
+  .request-description {
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+  }
+  
+  .conditional-fields {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-xl);
+    padding: var(--space-6);
+    margin-bottom: var(--space-6);
+  }
+  
+  .form-actions {
+    display: flex;
+    gap: var(--space-4);
+    justify-content: flex-end;
+    padding-top: var(--space-6);
+    border-top: 1px solid var(--border-subtle);
+  }
+  
+  @media (max-width: 768px) {
+    .resolution-title {
+      font-size: var(--text-3xl);
+    }
+    
+    .resolution-card {
+      padding: var(--space-6);
+    }
+    
+    .form-actions {
+      flex-direction: column-reverse;
+    }
+    
+    .form-actions .btn {
+      width: 100%;
+    }
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="resolution-container">
-    <div class="resolution-header">
-        <h2 class="page-title">Resolution Center - Order #{{ order.id }}</h2>
-        <p class="resolution-subtitle">Resolve order issues and get the help you need</p>
+  <div class="resolution-header">
+    <div class="resolution-icon">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+        <circle cx="12" cy="12" r="10"></circle>
+        <path d="M12 8v4"></path>
+        <path d="M12 16h.01"></path>
+      </svg>
     </div>
-
-    <div class="resolution-card">
-        <div class="resolution-content">
-            <h3 class="resolution-section-title">What can we help you with?</h3>
-            
-            <form action="/order/{{ order.id }}/resolution/submit" method="post" id="resolutionForm">
-                <div class="form-group">
-                    <label for="request_type" class="form-label">Select Request Type</label>
-                    <select name="request_type" id="request_type" class="form-select" required onchange="toggleFields()">
-                        <option value="">Choose an option...</option>
-                        {% if not is_admin %}
-                        {% if order.status != "Active" and order.status != "In dispute" and order.status != "Revision" %}
-                        <option value="revision">Request Revision</option>
-                        {% endif %}
-                        <option value="cancellation">Request Cancellation</option>
-                        {% else %}
-                        <option value="cancellation">Request Cancellation</option>
-                        <option value="extend_delivery">Extend delivery time</option>
-                        {% endif %}
-                    </select>
-                </div>
-
-                <div id="cancellationFields" class="cancellation-fields" style="display: none;">
-                    <div class="form-group">
-                        <label for="cancellation_reason" class="form-label">Choose the reason for your cancellation request</label>
-                        <select name="cancellation_reason" id="cancellation_reason" class="form-select">
-                            <option value="">Select a reason...</option>
-                            <option value="changed_mind">Changed my mind</option>
-                            <option value="found_alternative">Found alternative service</option>
-                            <option value="quality_concerns">Quality concerns</option>
-                            <option value="delivery_delay">Delivery delay</option>
-                            <option value="communication_issues">Communication issues</option>
-                            <option value="other">Other</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="cancellation_message" class="form-label">
-                            {% if is_admin %}
-                            Let {{ order.user.username }} know why you want to cancel this order
-                            {% else %}
-                            Let Kohina know why you want to cancel this order
-                            {% endif %}
-                        </label>
-                        <textarea name="cancellation_message" id="cancellation_message" class="form-textarea" rows="4" placeholder="Please provide details about why you want to cancel this order..."></textarea>
-                    </div>
-                </div>
-
-                <div id="extendDeliveryFields" class="extend-delivery-fields" style="display: none;">
-                    <div class="form-group">
-                        <label for="extension_days" class="form-label">Extend delivery by how many days?</label>
-                        <input type="number" name="extension_days" id="extension_days" class="form-input" min="1" max="30" placeholder="Enter number of days">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="extension_reason" class="form-label">Reason for extension</label>
-                        <textarea name="extension_reason" id="extension_reason" class="form-textarea" rows="3" placeholder="Please provide a reason for extending the delivery time..."></textarea>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="message" class="form-label" id="messageLabel">Message</label>
-                    <textarea name="message" id="message" class="form-textarea" rows="4" placeholder="Please describe your request in detail..." required></textarea>
-                </div>
-
-                <div class="form-actions">
-                    <a href="/order/{{ order.id }}" class="btn-cancel">Back to Order</a>
-                    <button type="submit" class="btn-submit">Submit Request</button>
-                </div>
-            </form>
+    <h1 class="resolution-title">Resolution Center</h1>
+    <p class="resolution-subtitle">Order #{{ order.id }} - We're here to help</p>
+  </div>
+  
+  <div class="resolution-card">
+    <h2 class="section-title">How can we help you?</h2>
+    
+    <form action="/order/{{ order.id }}/resolution/submit" method="post" id="resolutionForm">
+      <div class="form-group">
+        <label for="request_type" class="form-label">Select Request Type</label>
+        <select name="request_type" id="request_type" class="form-select" required onchange="toggleFields()">
+          <option value="">Choose an option...</option>
+          {% if not is_admin %}
+            {% if order.status not in ["Active", "In dispute", "Revision"] %}
+            <option value="revision">Request Revision</option>
+            {% endif %}
+            <option value="cancellation">Request Cancellation</option>
+          {% else %}
+            <option value="cancellation">Request Cancellation</option>
+            <option value="extend_delivery">Extend Delivery Time</option>
+          {% endif %}
+        </select>
+      </div>
+      
+      <!-- Cancellation Fields -->
+      <div id="cancellationFields" class="conditional-fields" style="display: none;">
+        <div class="form-group">
+          <label for="cancellation_reason" class="form-label">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="15" y1="9" x2="9" y2="15"></line>
+              <line x1="9" y1="9" x2="15" y2="15"></line>
+            </svg>
+            Cancellation Reason
+          </label>
+          <select name="cancellation_reason" id="cancellation_reason" class="form-select">
+            <option value="">Select a reason...</option>
+            <option value="changed_mind">Changed my mind</option>
+            <option value="found_alternative">Found alternative service</option>
+            <option value="quality_concerns">Quality concerns</option>
+            <option value="delivery_delay">Delivery delay</option>
+            <option value="communication_issues">Communication issues</option>
+            <option value="other">Other</option>
+          </select>
         </div>
-    </div>
+        
+        <div class="form-group">
+          <label for="cancellation_message" class="form-label">
+            {% if is_admin %}
+            Message to {{ order.user.username }}
+            {% else %}
+            Message to Admin
+            {% endif %}
+          </label>
+          <textarea 
+            name="cancellation_message" 
+            id="cancellation_message" 
+            class="form-textarea" 
+            rows="4" 
+            placeholder="Please provide details about why you want to cancel..."
+          ></textarea>
+        </div>
+      </div>
+      
+      <!-- Extension Fields -->
+      <div id="extendDeliveryFields" class="conditional-fields" style="display: none;">
+        <div class="form-group">
+          <label for="extension_days" class="form-label">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            Extension Days
+          </label>
+          <input 
+            type="number" 
+            name="extension_days" 
+            id="extension_days" 
+            class="form-input" 
+            min="1" 
+            max="30" 
+            placeholder="Number of days (1-30)"
+          >
+        </div>
+        
+        <div class="form-group">
+          <label for="extension_reason" class="form-label">Reason for Extension</label>
+          <textarea 
+            name="extension_reason" 
+            id="extension_reason" 
+            class="form-textarea" 
+            rows="3" 
+            placeholder="Why do you need more time?"
+          ></textarea>
+        </div>
+      </div>
+      
+      <!-- Main Message -->
+      <div class="form-group">
+        <label for="message" class="form-label" id="messageLabel">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+          </svg>
+          Message
+        </label>
+        <textarea 
+          name="message" 
+          id="message" 
+          class="form-textarea" 
+          rows="5" 
+          placeholder="Please describe your request in detail..."
+          required
+        ></textarea>
+        <span class="form-help">Be as specific as possible to help us resolve your issue quickly</span>
+      </div>
+      
+      <div class="form-actions">
+        <a href="/order/{{ order.id }}" class="btn btn-secondary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="19" y1="12" x2="5" y2="12"></line>
+            <polyline points="12 19 5 12 12 5"></polyline>
+          </svg>
+          Back to Order
+        </a>
+        <button type="submit" class="btn btn-primary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+          </svg>
+          Submit Request
+        </button>
+      </div>
+    </form>
+  </div>
 </div>
 
 <script>
 function toggleFields() {
-    const requestType = document.getElementById('request_type').value;
-    const cancellationFields = document.getElementById('cancellationFields');
-    const extendDeliveryFields = document.getElementById('extendDeliveryFields');
-    const messageLabel = document.getElementById('messageLabel');
-    const messageTextarea = document.getElementById('message');
-    
-    // Hide all conditional fields first
-    cancellationFields.style.display = 'none';
-    extendDeliveryFields.style.display = 'none';
-    
-    if (requestType === 'cancellation') {
-        cancellationFields.style.display = 'block';
-        messageLabel.textContent = 'Additional Details (Optional)';
-        messageTextarea.placeholder = 'Any additional information you\'d like to share...';
-        messageTextarea.required = false;
-    } else if (requestType === 'extend_delivery') {
-        extendDeliveryFields.style.display = 'block';
-        messageLabel.textContent = 'Additional Details (Optional)';
-        messageTextarea.placeholder = 'Any additional information about the extension...';
-        messageTextarea.required = false;
-    } else if (requestType === 'revision') {
-        messageLabel.textContent = 'What needs to be changed?';
-        messageTextarea.placeholder = 'Please describe what changes you need...';
-        messageTextarea.required = true;
-    } else {
-        messageLabel.textContent = 'Message';
-        messageTextarea.placeholder = 'Please describe your request in detail...';
-        messageTextarea.required = true;
-    }
+  const requestType = document.getElementById('request_type').value;
+  const cancellationFields = document.getElementById('cancellationFields');
+  const extendDeliveryFields = document.getElementById('extendDeliveryFields');
+  const messageLabel = document.getElementById('messageLabel');
+  const messageTextarea = document.getElementById('message');
+  
+  // Hide all conditional fields
+  cancellationFields.style.display = 'none';
+  extendDeliveryFields.style.display = 'none';
+  
+  // Show relevant fields and update labels
+  if (requestType === 'cancellation') {
+    cancellationFields.style.display = 'block';
+    messageLabel.innerHTML = `
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+      </svg>
+      Additional Details (Optional)
+    `;
+    messageTextarea.placeholder = 'Any additional information...';
+    messageTextarea.required = false;
+  } else if (requestType === 'extend_delivery') {
+    extendDeliveryFields.style.display = 'block';
+    messageLabel.innerHTML = `
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+      </svg>
+      Additional Details (Optional)
+    `;
+    messageTextarea.placeholder = 'Any additional information about the extension...';
+    messageTextarea.required = false;
+  } else if (requestType === 'revision') {
+    messageLabel.innerHTML = `
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+      </svg>
+      What needs to be changed?
+    `;
+    messageTextarea.placeholder = 'Please describe what changes you need...';
+    messageTextarea.required = true;
+  } else {
+    messageLabel.innerHTML = `
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+      </svg>
+      Message
+    `;
+    messageTextarea.placeholder = 'Please describe your request in detail...';
+    messageTextarea.required = true;
+  }
 }
 </script>
-
-<style>
-.resolution-container {
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 2rem;
-}
-
-.resolution-header {
-    text-align: center;
-    margin-bottom: 2rem;
-}
-
-.page-title {
-    font-size: 2rem;
-    font-weight: 700;
-    color: #fff;
-    margin-bottom: 0.5rem;
-}
-
-.resolution-subtitle {
-    font-size: 1.1rem;
-    color: #9ca3af;
-    margin: 0;
-}
-
-.resolution-card {
-    background: #1f2937;
-    border-radius: 16px;
-    padding: 2rem;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-}
-
-.resolution-content {
-    max-width: 600px;
-    margin: 0 auto;
-}
-
-.resolution-section-title {
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: #fff;
-    margin-bottom: 2rem;
-    text-align: center;
-}
-
-.form-group {
-    margin-bottom: 1.5rem;
-}
-
-.form-label {
-    display: block;
-    font-weight: 500;
-    color: #e5e7eb;
-    margin-bottom: 0.5rem;
-    font-size: 0.95rem;
-}
-
-.form-select,
-.form-textarea,
-.form-input {
-    width: 100%;
-    padding: 0.75rem;
-    border-radius: 8px;
-    border: 1px solid #374151;
-    background: #111827;
-    color: #fff;
-    font-size: 0.95rem;
-    transition: border-color 0.2s;
-}
-
-.form-select:focus,
-.form-textarea:focus,
-.form-input:focus {
-    outline: none;
-    border-color: #3b82f6;
-}
-
-.form-textarea {
-    resize: vertical;
-    min-height: 100px;
-}
-
-.cancellation-fields,
-.extend-delivery-fields {
-    background: #111827;
-    padding: 1.5rem;
-    border-radius: 12px;
-    margin-bottom: 1.5rem;
-    border: 1px solid #374151;
-}
-
-.form-actions {
-    display: flex;
-    gap: 1rem;
-    justify-content: flex-end;
-    margin-top: 2rem;
-}
-
-.btn-cancel {
-    padding: 0.75rem 1.5rem;
-    border-radius: 8px;
-    background: #6b7280;
-    color: #fff;
-    text-decoration: none;
-    font-weight: 600;
-    transition: background-color 0.2s;
-}
-
-.btn-cancel:hover {
-    background: #4b5563;
-}
-
-.btn-submit {
-    padding: 0.75rem 1.5rem;
-    border-radius: 8px;
-    background: #3b82f6;
-    color: #fff;
-    border: none;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-.btn-submit:hover {
-    background: #2563eb;
-}
-
-@media (max-width: 768px) {
-    .resolution-container {
-        padding: 1rem;
-    }
-    
-    .resolution-card {
-        padding: 1.5rem;
-    }
-    
-    .form-actions {
-        flex-direction: column;
-    }
-    
-    .btn-cancel,
-    .btn-submit {
-        width: 100%;
-        text-align: center;
-    }
-}
-</style>
 {% endblock %}

@@ -1,36 +1,160 @@
 {% extends "base.html" %}
-{% block title %}My Reviews{% endblock %}
+{% block title %}My Reviews - TaggedByBelle{% endblock %}
 
-{% block content %}
+{% block extra_css %}
 <style>
-.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem}
-.title{font-weight:800;color:#fff;margin:0;font-size:1.6rem}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1rem}
-.card{background:#111827;border:1px solid #1f2937;border-radius:14px;padding:1rem;box-shadow:0 8px 25px rgba(0,0,0,.25)}
-.rating{color:#fbbf24;font-size:1.1rem;margin-bottom:.35rem}
-.pkg{color:#cbd5e1;font-weight:700}
-.meta{color:#94a3b8;font-size:.85rem}
-.comment{color:#9ca3af;font-size:.9rem;margin-top:.35rem}
-.empty{color:#94a3b8}
+  .reviews-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 var(--space-6);
+  }
+  
+  .reviews-header {
+    margin-bottom: var(--space-8);
+  }
+  
+  .reviews-title {
+    font-size: var(--text-4xl);
+    font-weight: 900;
+    margin-bottom: var(--space-3);
+  }
+  
+  .reviews-subtitle {
+    font-size: var(--text-lg);
+    color: var(--text-secondary);
+  }
+  
+  .reviews-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: var(--space-6);
+  }
+  
+  .review-card {
+    background: var(--surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-xl);
+    padding: var(--space-6);
+    transition: all var(--transition-base);
+  }
+  
+  .review-card:hover {
+    border-color: var(--border-strong);
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-4px);
+  }
+  
+  .review-rating {
+    display: flex;
+    gap: 4px;
+    margin-bottom: var(--space-4);
+  }
+  
+  .star {
+    color: #fbbf24;
+    font-size: var(--text-2xl);
+  }
+  
+  .star-empty {
+    color: var(--border-default);
+  }
+  
+  .review-package {
+    font-size: var(--text-lg);
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: var(--space-2);
+  }
+  
+  .review-order-id {
+    font-size: var(--text-sm);
+    color: var(--text-tertiary);
+    margin-bottom: var(--space-4);
+  }
+  
+  .review-text {
+    color: var(--text-secondary);
+    line-height: var(--leading-relaxed);
+    font-size: var(--text-base);
+    padding: var(--space-4);
+    background: var(--bg-secondary);
+    border-left: 3px solid #fbbf24;
+    border-radius: var(--radius-md);
+  }
+  
+  .empty-reviews {
+    text-align: center;
+    padding: var(--space-16);
+  }
+  
+  .empty-icon {
+    width: 80px;
+    height: 80px;
+    background: var(--surface);
+    border-radius: var(--radius-2xl);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto var(--space-6);
+    font-size: var(--text-4xl);
+  }
+  
+  .empty-title {
+    font-size: var(--text-2xl);
+    font-weight: 800;
+    margin-bottom: var(--space-3);
+  }
+  
+  .empty-text {
+    color: var(--text-secondary);
+    margin-bottom: var(--space-6);
+  }
+  
+  @media (max-width: 768px) {
+    .reviews-title {
+      font-size: var(--text-3xl);
+    }
+    
+    .reviews-grid {
+      grid-template-columns: 1fr;
+    }
+  }
 </style>
-
-<div class="header">
-  <h2 class="title">My Reviews</h2>
-</div>
-
-<div class="grid">
-  {% for o in orders %}
-  <div class="card">
-    <div class="rating">{% for _ in range(o.review) %}★{% endfor %}{% for _ in range(5 - o.review) %}☆{% endfor %}</div>
-    <div class="pkg">{{ o.package.name if o.package else 'Package' }}</div>
-    <div class="meta">Order #{{ o.id }}</div>
-    {% if o.review_text %}
-    <div class="comment">“{{ o.review_text }}”</div>
-    {% endif %}
-  </div>
-  {% else %}
-  <p class="empty">You have not submitted any reviews yet.</p>
-  {% endfor %}
-</div>
 {% endblock %}
 
+{% block content %}
+<div class="reviews-container">
+  <div class="reviews-header">
+    <h1 class="reviews-title">My Reviews</h1>
+    <p class="reviews-subtitle">All the reviews you've submitted</p>
+  </div>
+  
+  {% if orders %}
+  <div class="reviews-grid">
+    {% for order in orders %}
+    <div class="review-card">
+      <div class="review-rating">
+        {% for i in range(5) %}
+          <span class="star {% if i >= order.review %}star-empty{% endif %}">★</span>
+        {% endfor %}
+      </div>
+      
+      <div class="review-package">{{ order.package.name if order.package else 'Package' }}</div>
+      <div class="review-order-id">Order #{{ order.id }}</div>
+      
+      {% if order.review_text %}
+      <div class="review-text">"{{ order.review_text }}"</div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-reviews">
+    <div class="empty-icon">⭐</div>
+    <h3 class="empty-title">No Reviews Yet</h3>
+    <p class="empty-text">You haven't submitted any reviews yet. Complete an order to leave your first review!</p>
+    <a href="/myorders" class="btn btn-primary">View My Orders</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

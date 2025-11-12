@@ -1,134 +1,550 @@
 {% extends "base.html" %}
-{% block title %}Analytics{% endblock %}
+{% block title %}Analytics - TaggedByBelle{% endblock %}
+
+{% block extra_css %}
+<style>
+  .analytics-container {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 0 var(--space-6);
+  }
+  
+  .analytics-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-8);
+    flex-wrap: wrap;
+    gap: var(--space-4);
+  }
+  
+  .analytics-title {
+    font-size: var(--text-4xl);
+    font-weight: 900;
+    margin: 0;
+  }
+  
+  .range-selector {
+    display: flex;
+    gap: var(--space-2);
+    background: var(--surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    padding: var(--space-1);
+  }
+  
+  .range-option {
+    padding: var(--space-2) var(--space-4);
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+  
+  .range-option:hover {
+    color: var(--text-primary);
+    background: var(--surface-hover);
+  }
+  
+  .range-option.active {
+    background: var(--brand);
+    color: var(--text-inverse);
+  }
+  
+  .kpis-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: var(--space-6);
+    margin-bottom: var(--space-8);
+  }
+  
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-xl);
+    padding: var(--space-6);
+    transition: all var(--transition-base);
+  }
+  
+  .kpi-card:hover {
+    border-color: var(--border-strong);
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+  }
+  
+  .kpi-label {
+    font-size: var(--text-sm);
+    color: var(--text-tertiary);
+    margin-bottom: var(--space-2);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+  
+  .kpi-value {
+    font-size: var(--text-4xl);
+    font-weight: 900;
+    color: var(--text-primary);
+    line-height: 1;
+  }
+  
+  .kpi-card.revenue .kpi-value {
+    color: var(--success);
+  }
+  
+  .kpi-card.rating .kpi-value {
+    color: #fbbf24;
+  }
+  
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-xl);
+    padding: var(--space-6);
+    margin-bottom: var(--space-8);
+  }
+  
+  .chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-6);
+  }
+  
+  .chart-title {
+    font-size: var(--text-xl);
+    font-weight: 800;
+    margin: 0;
+  }
+  
+  .chart-canvas {
+    height: 400px !important;
+  }
+  
+  .reviews-section {
+    margin-top: var(--space-8);
+  }
+  
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-6);
+  }
+  
+  .section-title {
+    font-size: var(--text-2xl);
+    font-weight: 800;
+    margin: 0;
+  }
+  
+  .reviews-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: var(--space-6);
+  }
+  
+  .review-card {
+    background: var(--surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-xl);
+    padding: var(--space-6);
+    transition: all var(--transition-base);
+  }
+  
+  .review-card:hover {
+    border-color: var(--border-default);
+    box-shadow: var(--shadow-lg);
+  }
+  
+  .review-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    margin-bottom: var(--space-4);
+  }
+  
+  .review-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-lg);
+    object-fit: cover;
+    background: linear-gradient(135deg, var(--accent-purple) 0%, #6d28d9 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 700;
+    font-size: var(--text-lg);
+    border: 2px solid var(--border-default);
+  }
+  
+  .review-info {
+    flex: 1;
+    min-width: 0;
+  }
+  
+  .review-author {
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: var(--space-1);
+  }
+  
+  .review-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--text-xs);
+    color: var(--text-tertiary);
+  }
+  
+  .review-rating {
+    display: flex;
+    gap: 2px;
+    margin-bottom: var(--space-4);
+  }
+  
+  .star {
+    color: #fbbf24;
+    font-size: var(--text-lg);
+  }
+  
+  .star-empty {
+    color: var(--border-default);
+  }
+  
+  .review-text {
+    color: var(--text-secondary);
+    line-height: var(--leading-relaxed);
+    font-size: var(--text-sm);
+  }
+  
+  @media (max-width: 768px) {
+    .analytics-title {
+      font-size: var(--text-3xl);
+    }
+    
+    .kpis-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+    
+    .chart-canvas {
+      height: 300px !important;
+    }
+    
+    .reviews-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %}
 
 {% block content %}
-<style>
-.head{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem}
-.title{font-weight:900;color:#fff;margin:0;font-size:1.6rem}
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin-bottom:1.25rem}
-.kpi{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:1rem}
-.kpi .label{color:var(--muted);font-size:.85rem}
-.kpi .value{font-weight:900;font-size:1.5rem}
-.chart{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:1rem;margin-bottom:1rem}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:1rem;display:flex;gap:.65rem}
-.avatar{width:44px;height:44px;border-radius:50%;object-fit:cover;border:1px solid rgba(255,255,255,.25);background:#0b1020}
-.user{font-weight:800;color:#e5e7eb}
-.rating{color:#fbbf24}
-.pkg{color:#cbd5e1;font-weight:600}
-.meta{color:#94a3b8;font-size:.85rem}
-.comment{color:#9ca3af;font-size:.9rem;margin-top:.35rem}
-</style>
-
-<div class="head">
-  <h2 class="title">Analytics Overview</h2>
-</div>
-
-<div class="kpis">
-  <div class="kpi"><div class="label">Total Orders</div><div class="value">{{ kpis.total }}</div></div>
-  <div class="kpi"><div class="label">Cancelled</div><div class="value">{{ kpis.cancelled }}</div></div>
-  <div class="kpi"><div class="label">Cancellation Rate</div><div class="value">{{ '%.1f'|format(kpis.cancellation_rate) }}%</div></div>
-  <div class="kpi"><div class="label">Completion Rate</div><div class="value">{{ '%.1f'|format(kpis.completion_rate) }}%</div></div>
-  <div class="kpi"><div class="label">Avg Rating</div><div class="value">{{ '%.2f'|format(kpis.avg_rating) }}</div></div>
-  <div class="kpi"><div class="label">Revenue</div><div class="value">${{ '%.2f'|format(kpis.revenue) }}</div></div>
-  <div class="kpi"><div class="label">Expected Earnings</div><div class="value">${{ '%.2f'|format(kpis.expected_earnings) }}</div></div>
-</div>
-
-<div class="chart">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">
-    <div class="subtle">Orders & Revenue</div>
-    <form method="get" action="/analytics">
-      <select name="range" onchange="this.form.submit()" style="background:#0b1020;border:1px solid var(--line);color:#e5e7eb;border-radius:8px;padding:.35rem .5rem">
-        <option value="monthly" {% if request.query_params.get('range','monthly')=='monthly' %}selected{% endif %}>Monthly</option>
-        <option value="yearly" {% if request.query_params.get('range')=='yearly' %}selected{% endif %}>Yearly</option>
-      </select>
+<div class="analytics-container">
+  <div class="analytics-header">
+    <h1 class="analytics-title">Analytics Overview</h1>
+    
+    <form method="get" action="/analytics" style="margin: 0;">
+      <div class="range-selector">
+        <button 
+          type="submit" 
+          name="range" 
+          value="monthly" 
+          class="range-option {% if request.query_params.get('range', 'monthly') == 'monthly' %}active{% endif %}"
+        >
+          Monthly
+        </button>
+        <button 
+          type="submit" 
+          name="range" 
+          value="yearly" 
+          class="range-option {% if request.query_params.get('range') == 'yearly' %}active{% endif %}"
+        >
+          Yearly
+        </button>
+      </div>
     </form>
   </div>
-  <canvas id="ordersChart" height="110"></canvas>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <script>
-    const ctx = document.getElementById('ordersChart').getContext('2d');
-    const labels = {{ chart_labels | tojson }};
-    const revenue = {{ chart_revenue | tojson }};
-    const completed = {{ chart_completed | tojson }};
-    const cancelled = {{ chart_cancelled | tojson }};
-    const cancelledRevenue = {{ chart_cancelled_revenue | tojson }};
-    const chart = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: [{
-          label: 'Revenue (€)',
+  
+  <!-- KPI Cards -->
+  <div class="kpis-grid">
+    <div class="kpi-card">
+      <div class="kpi-label">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+        </svg>
+        Total Orders
+      </div>
+      <div class="kpi-value">{{ kpis.total }}</div>
+    </div>
+    
+    <div class="kpi-card">
+      <div class="kpi-label">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+          <polyline points="22 4 12 14.01 9 11.01"></polyline>
+        </svg>
+        Completed
+      </div>
+      <div class="kpi-value">{{ kpis.completed }}</div>
+    </div>
+    
+    <div class="kpi-card">
+      <div class="kpi-label">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="15" y1="9" x2="9" y2="15"></line>
+          <line x1="9" y1="9" x2="15" y2="15"></line>
+        </svg>
+        Cancelled
+      </div>
+      <div class="kpi-value">{{ kpis.cancelled }}</div>
+    </div>
+    
+    <div class="kpi-card rating">
+      <div class="kpi-label">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+        </svg>
+        Avg Rating
+      </div>
+      <div class="kpi-value">{{ '%.2f'|format(kpis.avg_rating) }}★</div>
+    </div>
+    
+    <div class="kpi-card revenue">
+      <div class="kpi-label">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="1" x2="12" y2="23"></line>
+          <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+        </svg>
+        Revenue
+      </div>
+      <div class="kpi-value">${{ '%.2f'|format(kpis.revenue) }}</div>
+    </div>
+    
+    <div class="kpi-card">
+      <div class="kpi-label">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <polyline points="12 6 12 12 16 14"></polyline>
+        </svg>
+        Expected
+      </div>
+      <div class="kpi-value">${{ '%.2f'|format(kpis.expected_earnings) }}</div>
+    </div>
+    
+    <div class="kpi-card">
+      <div class="kpi-label">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+        </svg>
+        Completion Rate
+      </div>
+      <div class="kpi-value">{{ '%.1f'|format(kpis.completion_rate) }}%</div>
+    </div>
+    
+    <div class="kpi-card">
+      <div class="kpi-label">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+        Cancel Rate
+      </div>
+      <div class="kpi-value">{{ '%.1f'|format(kpis.cancellation_rate) }}%</div>
+    </div>
+  </div>
+  
+  <!-- Chart -->
+  <div class="chart-card">
+    <div class="chart-header">
+      <h2 class="chart-title">Orders & Revenue Trends</h2>
+    </div>
+    <canvas id="ordersChart" class="chart-canvas"></canvas>
+  </div>
+  
+  <!-- Reviews Section -->
+  <section class="reviews-section">
+    <div class="section-header">
+      <h2 class="section-title">Recent Reviews</h2>
+    </div>
+    
+    {% if recent_reviews %}
+    <div class="reviews-grid">
+      {% for order in recent_reviews %}
+      <div class="review-card">
+        <div class="review-header">
+          {% if order.user and order.user.avatar %}
+            <img src="{{ url_for('uploads', path=order.user.avatar) }}" alt="{{ order.user.username }}" class="review-avatar">
+          {% else %}
+            <div class="review-avatar">
+              {{ order.user.username[0]|upper if order.user else '?' }}
+            </div>
+          {% endif %}
+          
+          <div class="review-info">
+            <div class="review-author">{{ order.user.username if order.user else 'Anonymous' }}</div>
+            <div class="review-meta">
+              {{ order.package.name if order.package else 'Package' }}
+              <span>•</span>
+              Order #{{ order.id }}
+            </div>
+          </div>
+        </div>
+        
+        <div class="review-rating">
+          {% for i in range(5) %}
+            <span class="star {% if i >= order.review %}star-empty{% endif %}">★</span>
+          {% endfor %}
+        </div>
+        
+        {% if order.review_text %}
+        <p class="review-text">"{{ order.review_text }}"</p>
+        {% else %}
+        <p class="review-text">"Great service!"</p>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div style="text-align: center; padding: var(--space-12); color: var(--text-tertiary);">
+      No reviews yet
+    </div>
+    {% endif %}
+  </section>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+  const ctx = document.getElementById('ordersChart').getContext('2d');
+  const labels = {{ chart_labels | tojson }};
+  const revenue = {{ chart_revenue | tojson }};
+  const completed = {{ chart_completed | tojson }};
+  const cancelled = {{ chart_cancelled | tojson }};
+  
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Revenue ($)',
           data: revenue,
-          backgroundColor: 'rgba(226,251,82,0.35)',
-          borderColor: '#e2fb52'
-        },{
+          backgroundColor: 'rgba(226, 251, 82, 0.2)',
+          borderColor: '#e2fb52',
+          borderWidth: 2,
+          borderRadius: 8,
+        },
+        {
           type: 'line',
-          label: 'Completed',
+          label: 'Completed Orders',
           data: completed,
-          borderColor: '#60a5fa',
+          borderColor: '#10b981',
           backgroundColor: 'transparent',
-          tension: 0.35,
-          yAxisID: 'y1'
-        },{
+          tension: 0.4,
+          borderWidth: 3,
+          pointRadius: 4,
+          pointBackgroundColor: '#10b981',
+          yAxisID: 'y1',
+        },
+        {
           type: 'line',
-          label: 'Cancelled',
+          label: 'Cancelled Orders',
           data: cancelled,
           borderColor: '#ef4444',
           backgroundColor: 'transparent',
-          tension: 0.35,
-          yAxisID: 'y1'
-        }]
+          tension: 0.4,
+          borderWidth: 3,
+          pointRadius: 4,
+          pointBackgroundColor: '#ef4444',
+          yAxisID: 'y1',
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: 'index',
+        intersect: false,
       },
-      options: {
-        responsive: true,
-        scales: {
-          x: { grid: { color: 'rgba(255,255,255,0.06)' }, ticks: { color: '#9aa4b2' } },
-          y: { grid: { color: 'rgba(255,255,255,0.06)' }, ticks: { color: '#9aa4b2' }, beginAtZero: true },
-          y1: { position: 'right', grid: { display:false }, ticks: { color: '#9aa4b2' }, beginAtZero: true }
-        },
-        plugins: { 
-          legend: { labels: { color: '#e6e9ef' } },
-          tooltip: {
-            callbacks: {
-              title: (items)=> items[0].label,
-              label: (item)=>{
-                if(item.datasetIndex===0){ return 'Sales: $' + item.formattedValue; }
-                if(item.datasetIndex===1){ return 'Completed: ' + item.formattedValue; }
-                if(item.datasetIndex===2){ 
-                  const cancelledValue = item.formattedValue;
-                  const cancelledRevValue = cancelledRevenue[item.dataIndex];
-                  return 'Cancelled: ' + cancelledValue + ' (Lost: $' + cancelledRevValue + ')'; 
-                }
-              }
+      scales: {
+        x: {
+          grid: {
+            color: 'rgba(255, 255, 255, 0.06)',
+            drawBorder: false,
+          },
+          ticks: {
+            color: '#9aa4b2',
+            font: {
+              size: 12,
             }
+          }
+        },
+        y: {
+          grid: {
+            color: 'rgba(255, 255, 255, 0.06)',
+            drawBorder: false,
+          },
+          ticks: {
+            color: '#9aa4b2',
+            font: {
+              size: 12,
+            },
+            callback: function(value) {
+              return '$' + value;
+            }
+          },
+          beginAtZero: true,
+        },
+        y1: {
+          position: 'right',
+          grid: {
+            display: false,
+          },
+          ticks: {
+            color: '#9aa4b2',
+            font: {
+              size: 12,
+            }
+          },
+          beginAtZero: true,
+        }
+      },
+      plugins: {
+        legend: {
+          labels: {
+            color: '#e6e9ef',
+            font: {
+              size: 13,
+              weight: 600,
+            },
+            padding: 20,
+            usePointStyle: true,
+          }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(14, 20, 34, 0.95)',
+          titleColor: '#e6e9ef',
+          bodyColor: '#9aa4b2',
+          borderColor: 'rgba(255, 255, 255, 0.1)',
+          borderWidth: 1,
+          padding: 12,
+          cornerRadius: 8,
+          titleFont: {
+            size: 14,
+            weight: 700,
+          },
+          bodyFont: {
+            size: 13,
           }
         }
       }
-    });
-  </script>
-</div>
-
-<h3 class="title" style="font-size:1.1rem;margin:1rem 0">Recent Reviews</h3>
-<div class="grid">
-  {% for o in recent_reviews %}
-  <div class="card">
-    {% if o.user and o.user.avatar %}
-      <img class="avatar" src="{{ url_for('uploads', path=o.user.avatar) }}" alt="{{ o.user.username }}">
-    {% else %}
-      <div class="avatar" style="display:grid;place-items:center;color:#64748b">{{ o.user.username[0]|upper if o.user else '?' }}</div>
-    {% endif %}
-    <div>
-      <div class="user">{{ o.user.username if o.user else 'User' }}</div>
-      <div class="rating">{% for _ in range(o.review) %}★{% endfor %}{% for _ in range(5 - o.review) %}☆{% endfor %}</div>
-      <div class="pkg">{{ o.package.name if o.package else 'Package' }}</div>
-      <div class="meta">Order #{{ o.id }}</div>
-      {% if o.review_text %}<div class="comment">“{{ o.review_text }}”</div>{% endif %}
-    </div>
-  </div>
-  {% else %}
-  <p class="meta">No recent reviews.</p>
-  {% endfor %}
-</div>
+    }
+  });
+</script>
 {% endblock %}
-

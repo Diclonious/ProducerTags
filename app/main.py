@@ -28,6 +28,7 @@ UPLOAD_DIR = BASE_DIR / "uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)
 
 app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
+app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 
 from starlette.responses import RedirectResponse
 from starlette.status import HTTP_302_FOUND

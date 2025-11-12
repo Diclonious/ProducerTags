@@ -1,87 +1,333 @@
 {% extends "base.html" %}
-{% block title %}Review Order{% endblock %}
+{% block title %}Review Order - TaggedByBelle{% endblock %}
+
+{% block extra_css %}
+<style>
+  .review-container {
+    max-width: 700px;
+    margin: 0 auto;
+    padding: 0 var(--space-6);
+  }
+  
+  .review-header {
+    text-align: center;
+    margin-bottom: var(--space-10);
+  }
+  
+  .review-icon {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+    border-radius: var(--radius-2xl);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto var(--space-6);
+    font-size: var(--text-4xl);
+    box-shadow: 0 0 40px rgba(251, 191, 36, 0.3);
+    animation: pulse-subtle 2s ease-in-out infinite;
+  }
+  
+  @keyframes pulse-subtle {
+    0%, 100% {
+      transform: scale(1);
+      box-shadow: 0 0 40px rgba(251, 191, 36, 0.3);
+    }
+    50% {
+      transform: scale(1.05);
+      box-shadow: 0 0 60px rgba(251, 191, 36, 0.4);
+    }
+  }
+  
+  .review-title {
+    font-size: var(--text-4xl);
+    font-weight: 900;
+    margin-bottom: var(--space-3);
+  }
+  
+  .review-subtitle {
+    font-size: var(--text-lg);
+    color: var(--text-secondary);
+  }
+  
+  .review-card {
+    background: var(--surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-2xl);
+    padding: var(--space-8);
+    box-shadow: var(--shadow-xl);
+  }
+  
+  .rating-section {
+    margin-bottom: var(--space-8);
+  }
+  
+  .rating-label {
+    font-size: var(--text-lg);
+    font-weight: 700;
+    margin-bottom: var(--space-4);
+    text-align: center;
+    color: var(--text-primary);
+  }
+  
+  .star-rating {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-2);
+  }
+  
+  .star-btn {
+    background: none;
+    border: none;
+    font-size: 3rem;
+    color: var(--border-default);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    padding: 0;
+  }
+  
+  .star-btn:hover,
+  .star-btn.active {
+    color: #fbbf24;
+    transform: scale(1.2);
+  }
+  
+  .star-btn:hover {
+    filter: drop-shadow(0 0 8px #fbbf24);
+  }
+  
+  .rating-text {
+    text-align: center;
+    font-size: var(--text-base);
+    color: var(--text-secondary);
+    font-weight: 600;
+  }
+  
+  .form-divider {
+    height: 1px;
+    background: var(--border-subtle);
+    margin: var(--space-8) 0;
+  }
+  
+  .review-textarea-wrapper {
+    margin-bottom: var(--space-6);
+  }
+  
+  .char-counter {
+    text-align: right;
+    font-size: var(--text-sm);
+    color: var(--text-tertiary);
+    margin-top: var(--space-2);
+  }
+  
+  .form-actions {
+    display: flex;
+    gap: var(--space-4);
+  }
+  
+  .btn-submit-review {
+    flex: 1;
+    padding: var(--space-4);
+    background: var(--brand);
+    color: var(--text-inverse);
+    border: none;
+    border-radius: var(--radius-xl);
+    font-size: var(--text-lg);
+    font-weight: 800;
+    cursor: pointer;
+    transition: all var(--transition-base);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+  }
+  
+  .btn-submit-review:hover {
+    background: var(--brand-hover);
+    box-shadow: 0 0 40px rgba(226, 251, 82, 0.4);
+    transform: translateY(-2px);
+  }
+  
+  .btn-submit-review:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
+  @media (max-width: 768px) {
+    .review-title {
+      font-size: var(--text-3xl);
+    }
+    
+    .star-btn {
+      font-size: 2.5rem;
+    }
+    
+    .review-card {
+      padding: var(--space-6);
+    }
+    
+    .form-actions {
+      flex-direction: column;
+    }
+  }
+</style>
+{% endblock %}
 
 {% block content %}
-<h2 class="page-title">Review Order #{{ order.id }}</h2>
+<div class="review-container">
+  <div class="review-header">
+    <div class="review-icon">⭐</div>
+    <h1 class="review-title">Share Your Experience</h1>
+    <p class="review-subtitle">Help others by reviewing Order #{{ order.id }}</p>
+  </div>
+  
+  <div class="review-card">
+    <form action="/order/{{ order.id }}/review" method="post" id="reviewForm">
+      <!-- Star Rating Section -->
+      <div class="rating-section">
+        <label class="rating-label">How would you rate your experience?</label>
+        
+        <div class="star-rating" id="starRating">
+          <button type="button" class="star-btn" data-rating="1">★</button>
+          <button type="button" class="star-btn" data-rating="2">★</button>
+          <button type="button" class="star-btn" data-rating="3">★</button>
+          <button type="button" class="star-btn" data-rating="4">★</button>
+          <button type="button" class="star-btn" data-rating="5">★</button>
+        </div>
+        
+        <div class="rating-text" id="ratingText">Click a star to rate</div>
+        
+        <input type="hidden" id="rating" name="rating" value="" required>
+      </div>
+      
+      <div class="form-divider"></div>
+      
+      <!-- Review Text Section -->
+      <div class="review-textarea-wrapper">
+        <div class="form-group">
+          <label for="review_text" class="form-label">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+            Tell us about your experience
+          </label>
+          <textarea 
+            id="review_text" 
+            name="review_text" 
+            class="form-textarea"
+            rows="6"
+            placeholder="Share your thoughts about the service, quality, delivery time, or anything else..."
+            required
+            maxlength="500"
+          ></textarea>
+          <div class="char-counter">
+            <span id="charCount">0</span> / 500 characters
+          </div>
+        </div>
+      </div>
+      
+      <!-- Form Actions -->
+      <div class="form-actions">
+        <a href="/myorders" class="btn btn-secondary" style="flex: 1; text-align: center;">
+          Skip for Now
+        </a>
+        <button type="submit" class="btn-submit-review" id="submitBtn" disabled>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+          </svg>
+          Submit Review
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
 
-<form action="/order/{{ order.id }}/review" method="post" class="review-form">
-    <div class="form-group">
-        <label for="review_text">Your Review</label>
-        <textarea id="review_text" name="review_text" rows="5" placeholder="Write your review..." required></textarea>
-    </div>
-
-    <div class="form-group">
-        <label for="rating">Rating</label>
-        <select id="rating" name="rating" required>
-            <option value="5">5 - Excellent</option>
-            <option value="4">4 - Good</option>
-            <option value="3">3 - Average</option>
-            <option value="2">2 - Poor</option>
-            <option value="1">1 - Terrible</option>
-        </select>
-    </div>
-
-    <button type="submit" class="btn-submit">Submit Review</button>
-</form>
-
-<style>
-.page-title {
-    font-size: 1.8rem;
-    margin-bottom: 1rem;
-    color: #fff;
-}
-
-.review-form {
-    background: #1f2937;
-    padding: 1.5rem;
-    border-radius: 12px;
-    max-width: 600px;
-}
-
-.form-group {
-    display: flex;
-    flex-direction: column;
-    margin-bottom: 1rem;
-}
-
-.form-group label {
-    font-weight: 500;
-    margin-bottom: 0.25rem;
-    color: #e5e7eb;
-}
-
-.form-group textarea,
-.form-group select {
-    padding: 0.5rem;
-    border-radius: 8px;
-    border: 1px solid #374151;
-    background: #111827;
-    color: #fff;
-    font-size: 0.95rem;
-    width: 100%;
-    transition: border 0.2s;
-}
-
-.form-group textarea:focus,
-.form-group select:focus {
-    outline: none;
-    border-color: #3b82f6;
-}
-
-.btn-submit {
-    width: 100%;
-    background: #3b82f6;
-    color: #fff;
-    font-weight: 600;
-    padding: 0.6rem 1rem;
-    border-radius: 8px;
-    border: none;
-    cursor: pointer;
-    transition: background 0.2s;
-}
-
-.btn-submit:hover {
-    background: #2563eb;
-}
-</style>
+<script>
+  // Star Rating System
+  const stars = document.querySelectorAll('.star-btn');
+  const ratingInput = document.getElementById('rating');
+  const ratingText = document.getElementById('ratingText');
+  const submitBtn = document.getElementById('submitBtn');
+  let selectedRating = 0;
+  
+  const ratingLabels = {
+    1: 'Poor - Not satisfied',
+    2: 'Fair - Could be better',
+    3: 'Good - Satisfactory',
+    4: 'Very Good - Exceeded expectations',
+    5: 'Excellent - Outstanding!'
+  };
+  
+  stars.forEach((star, index) => {
+    star.addEventListener('click', function() {
+      selectedRating = parseInt(this.getAttribute('data-rating'));
+      ratingInput.value = selectedRating;
+      ratingText.textContent = ratingLabels[selectedRating];
+      ratingText.style.color = 'var(--brand)';
+      
+      // Update star display
+      stars.forEach((s, i) => {
+        if (i < selectedRating) {
+          s.classList.add('active');
+        } else {
+          s.classList.remove('active');
+        }
+      });
+      
+      // Enable submit button
+      updateSubmitButton();
+    });
+    
+    // Hover effect
+    star.addEventListener('mouseenter', function() {
+      const hoverRating = parseInt(this.getAttribute('data-rating'));
+      stars.forEach((s, i) => {
+        if (i < hoverRating) {
+          s.style.color = '#fbbf24';
+        } else {
+          s.style.color = s.classList.contains('active') ? '#fbbf24' : 'var(--border-default)';
+        }
+      });
+    });
+    
+    star.addEventListener('mouseleave', function() {
+      stars.forEach((s, i) => {
+        s.style.color = s.classList.contains('active') ? '#fbbf24' : 'var(--border-default)';
+      });
+    });
+  });
+  
+  // Character counter
+  const reviewText = document.getElementById('review_text');
+  const charCount = document.getElementById('charCount');
+  
+  reviewText.addEventListener('input', function() {
+    charCount.textContent = this.value.length;
+    updateSubmitButton();
+  });
+  
+  function updateSubmitButton() {
+    const hasRating = selectedRating > 0;
+    const hasText = reviewText.value.trim().length > 0;
+    submitBtn.disabled = !(hasRating && hasText);
+  }
+  
+  // Form submission
+  document.getElementById('reviewForm').addEventListener('submit', function(e) {
+    if (!selectedRating || !reviewText.value.trim()) {
+      e.preventDefault();
+      if (!selectedRating) {
+        ratingText.textContent = 'Please select a rating';
+        ratingText.style.color = 'var(--error)';
+      }
+      return;
+    }
+    
+    // Show loading state
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner"></span> Submitting...';
+  });
+</script>
 {% endblock %}

@@ -1,107 +1,299 @@
 {% extends "base.html" %}
-{% block title %}Place New Order{% endblock %}
+{% block title %}New Order - TaggedByBelle{% endblock %}
+
+{% block extra_css %}
+<style>
+  .order-form-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 0 var(--space-6);
+  }
+  
+  .page-header {
+    margin-bottom: var(--space-8);
+  }
+  
+  .page-title {
+    font-size: var(--text-4xl);
+    font-weight: 900;
+    margin-bottom: var(--space-3);
+  }
+  
+  .package-info-bar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-6);
+    padding: var(--space-4) var(--space-6);
+    background: var(--surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-xl);
+    flex-wrap: wrap;
+  }
+  
+  .package-info-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+  }
+  
+  .package-info-value {
+    color: var(--text-primary);
+    font-weight: 600;
+  }
+  
+  .form-card {
+    background: var(--surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-2xl);
+    padding: var(--space-8);
+    margin-bottom: var(--space-6);
+  }
+  
+  .form-section-title {
+    font-size: var(--text-xl);
+    font-weight: 800;
+    margin-bottom: var(--space-6);
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+  
+  .section-icon {
+    width: 32px;
+    height: 32px;
+    background: var(--brand-subtle);
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--brand);
+  }
+  
+  .tags-grid {
+    display: grid;
+    gap: var(--space-6);
+  }
+  
+  .tag-group {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-xl);
+    padding: var(--space-6);
+  }
+  
+  .tag-group-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+  }
+  
+  .tag-number {
+    width: 32px;
+    height: 32px;
+    background: var(--brand);
+    color: var(--text-inverse);
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: var(--text-sm);
+  }
+  
+  .tag-label {
+    font-size: var(--text-lg);
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+  
+  .tag-inputs {
+    display: grid;
+    gap: var(--space-4);
+  }
+  
+  .form-actions {
+    display: flex;
+    gap: var(--space-4);
+    justify-content: flex-end;
+  }
+  
+  .btn-submit-order {
+    padding: var(--space-4) var(--space-8);
+    background: var(--brand);
+    color: var(--text-inverse);
+    border: none;
+    border-radius: var(--radius-xl);
+    font-size: var(--text-lg);
+    font-weight: 800;
+    cursor: pointer;
+    transition: all var(--transition-base);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+  
+  .btn-submit-order:hover {
+    background: var(--brand-hover);
+    box-shadow: 0 0 40px rgba(226, 251, 82, 0.4);
+    transform: translateY(-2px);
+  }
+  
+  @media (max-width: 768px) {
+    .page-title {
+      font-size: var(--text-3xl);
+    }
+    
+    .form-card {
+      padding: var(--space-6);
+    }
+    
+    .form-actions {
+      flex-direction: column-reverse;
+    }
+    
+    .btn-submit-order {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+</style>
+{% endblock %}
 
 {% block content %}
-<h2 class="page-title">Place Your Order: {{ package.name }}</h2>
-<p class="package-info">Delivery: {{ package.delivery_days }} day{{ 's' if package.delivery_days != 1 }} | Tags allowed: {{ package.tag_count }}</p>
-
-<form action="/order/submit" method="post" class="order-form">
+<div class="order-form-container">
+  <div class="page-header">
+    <h1 class="page-title">Place Your Order</h1>
+    
+    <div class="package-info-bar">
+      <div class="package-info-item">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+        </svg>
+        <span>Package:</span>
+        <span class="package-info-value">{{ package.name }}</span>
+      </div>
+      <div class="package-info-item">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <polyline points="12 6 12 12 16 14"></polyline>
+        </svg>
+        <span>Delivery:</span>
+        <span class="package-info-value">{{ package.delivery_days }} day{{ 's' if package.delivery_days != 1 }}</span>
+      </div>
+      <div class="package-info-item">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+        </svg>
+        <span>Tags:</span>
+        <span class="package-info-value">{{ package.tag_count }}</span>
+      </div>
+      <div class="package-info-item" style="margin-left: auto;">
+        <span>Total:</span>
+        <span class="package-info-value" style="font-size: var(--text-xl); color: var(--brand);">
+          ${{ package.price }}
+        </span>
+      </div>
+    </div>
+  </div>
+  
+  <form action="/order/submit" method="post">
     <input type="hidden" name="package_id" value="{{ package.id }}">
-
-    {% for i in range(package.tag_count) %}
-    <div class="form-group">
-        <label for="tag{{ i }}">Tag {{ i + 1 }}:</label>
-        <input type="text" id="tag{{ i }}" name="tags" placeholder="Enter tag" required>
-
-        <label for="mood{{ i }}">Mood:</label>
-        <select name="moods" id="mood{{ i }}">
-            <option value="happy">Happy</option>
-            <option value="dark">Dark</option>
-            <option value="sad">Sad</option>
-            <option value="funny">Funny</option>
-        </select>
+    
+    <!-- Tags Section -->
+    <div class="form-card">
+      <h2 class="form-section-title">
+        <span class="section-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+            <line x1="7" y1="7" x2="7.01" y2="7"></line>
+          </svg>
+        </span>
+        Your Tags
+      </h2>
+      
+      <div class="tags-grid">
+        {% for i in range(package.tag_count) %}
+        <div class="tag-group">
+          <div class="tag-group-header">
+            <span class="tag-number">{{ i + 1 }}</span>
+            <span class="tag-label">Tag {{ i + 1 }}</span>
+          </div>
+          
+          <div class="tag-inputs">
+            <div class="form-group">
+              <label for="tag{{ i }}" class="form-label">Tag Name</label>
+              <input 
+                type="text" 
+                id="tag{{ i }}" 
+                name="tags" 
+                class="form-input"
+                placeholder="Enter your tag (e.g., 'Producer Tag')"
+                required
+              >
+            </div>
+            
+            <div class="form-group">
+              <label for="mood{{ i }}" class="form-label">Mood/Style</label>
+              <select name="moods" id="mood{{ i }}" class="form-select" required>
+                <option value="">Select a mood...</option>
+                <option value="happy">Happy / Upbeat</option>
+                <option value="dark">Dark / Mysterious</option>
+                <option value="sad">Sad / Emotional</option>
+                <option value="funny">Funny / Playful</option>
+                <option value="aggressive">Aggressive / Hard</option>
+                <option value="smooth">Smooth / Chill</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
     </div>
-    {% endfor %}
-
-    <div class="form-group">
-        <label for="details">Details (optional):</label>
-        <textarea name="details" id="details" placeholder="Provide any additional details..."></textarea>
+    
+    <!-- Additional Details Section -->
+    <div class="form-card">
+      <h2 class="form-section-title">
+        <span class="section-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg>
+        </span>
+        Additional Details
+      </h2>
+      
+      <div class="form-group">
+        <label for="details" class="form-label">Special Instructions (Optional)</label>
+        <textarea 
+          name="details" 
+          id="details" 
+          class="form-textarea"
+          rows="6"
+          placeholder="Provide any additional details, reference examples, or special requests..."
+        ></textarea>
+        <span class="form-help">Include any specific requirements, style preferences, or reference links</span>
+      </div>
     </div>
-
-    <button type="submit" class="btn-submit">Submit Order</button>
-</form>
-
-<style>
-.page-title {
-    font-size: 1.8rem;
-    margin-bottom: 0.5rem;
-    color: #fff;
-}
-
-.package-info {
-    color: #9ca3af;
-    margin-bottom: 1.5rem;
-}
-
-.order-form {
-    background: #1f2937;
-    padding: 1.5rem;
-    border-radius: 12px;
-    max-width: 600px;
-}
-
-.form-group {
-    display: flex;
-    flex-direction: column;
-    margin-bottom: 1rem;
-}
-
-.form-group label {
-    font-weight: 500;
-    margin-bottom: 0.25rem;
-    color: #e5e7eb;
-}
-
-.form-group input[type="text"],
-.form-group select,
-.form-group textarea {
-    padding: 0.5rem;
-    border-radius: 8px;
-    border: 1px solid #374151;
-    background: #111827;
-    color: #fff;
-    font-size: 0.95rem;
-    width: 100%;
-    transition: border 0.2s;
-}
-
-.form-group input[type="text"]:focus,
-.form-group select:focus,
-.form-group textarea:focus {
-    outline: none;
-    border-color: #3b82f6;
-}
-
-.form-group textarea {
-    resize: vertical;
-    min-height: 80px;
-}
-
-.btn-submit {
-    background: #3b82f6;
-    color: #fff;
-    font-weight: 600;
-    padding: 0.65rem 1rem;
-    border-radius: 8px;
-    border: none;
-    cursor: pointer;
-    transition: background 0.2s;
-    width: 100%;
-    margin-top: 0.5rem;
-}
-
-.btn-submit:hover {
-    background: #2563eb;
-}
-</style>
+    
+    <!-- Form Actions -->
+    <div class="form-actions">
+      <a href="/order/new" class="btn btn-secondary">
+        Back to Packages
+      </a>
+      <button type="submit" class="btn-submit-order">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+          <polyline points="22 4 12 14.01 9 11.01"></polyline>
+        </svg>
+        Submit Order
+      </button>
+    </div>
+  </form>
+</div>
 {% endblock %}
