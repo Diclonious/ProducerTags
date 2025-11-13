@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Request, Form, HTTPException, Depends, UploadFile, File
+from typing import List
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import FileResponse
 from starlette.middleware.sessions import SessionMiddleware
@@ -15,6 +16,7 @@ from app.domain.User import User
 from app.domain.Order import Order
 from app.domain.Tag import Tag
 from app.domain.Delivery import Delivery
+from app.domain.DeliveryFile import DeliveryFile
 from app.domain.OrderEvent import OrderEvent
 from app.domain.Message import Message
 from app.domain.Notification import Notification
@@ -46,6 +48,7 @@ def startup_event():
     from app.domain.Package import Package
     from app.domain.Tag import Tag
     from app.domain.Delivery import Delivery
+    from app.domain.DeliveryFile import DeliveryFile
     from app.domain.OrderEvent import OrderEvent
     from app.domain.Message import Message
     from app.domain.Notification import Notification
@@ -760,6 +763,7 @@ async def view_order(request: Request, order_id: int):
                 joinedload(Order.user), 
                 joinedload(Order.package), 
                 joinedload(Order.deliveries).joinedload(Delivery.user),
+                joinedload(Order.deliveries).joinedload(Delivery.files),
                 joinedload(Order.events).joinedload(OrderEvent.user),
                 joinedload(Order.messages).joinedload(Message.sender)
             )
@@ -793,15 +797,10 @@ async def view_order(request: Request, order_id: int):
                     })
         
         # Add events (excluding 'delivered' events since they're represented by deliveries)
-        # Exclude revision_requested events if order is currently in dispute with revision request
-        # (they're shown in the Dispute Card section instead to avoid duplication)
+        # Show all events including revision_requested - they should appear in timeline immediately
         if order.events:
             for event in order.events:
                 if event.event_type != 'delivered' and event.created_at:  # Only add events with valid timestamps
-                    # Skip revision_requested events if order is currently in dispute with revision request
-                    # (they're shown in the Dispute Card section)
-                    if event.event_type == 'revision_requested' and order.status == 'In dispute' and order.request_type == 'revision':
-                        continue
                     timeline_items.append({
                         'type': 'event',
                         'event': event,
@@ -921,7 +920,7 @@ async def admin_deliver_order(
         request: Request,
         order_id: int,
         response_text: str = Form(...),
-        file: UploadFile = File(...)
+        files: List[UploadFile] = File(...)
 ):
     if not request.session.get("is_admin"):
         raise HTTPException(status_code=403, detail="Forbidden")
@@ -932,33 +931,61 @@ async def admin_deliver_order(
         if not order or order.status not in ["Active", "Revision"]:
             raise HTTPException(status_code=400, detail="Cannot deliver in this state")
 
-        # Save the uploaded file
-        filename = save_uploaded_file(file, "delivery")
-        file_path = UPLOAD_DIR / filename
-
-        with open(file_path, "wb") as f:
-            content = await file.read()
-            f.write(content)
+        if not files:
+            raise HTTPException(status_code=400, detail="At least one file is required")
 
         # Get the next delivery number for this order
         delivery_count = db.query(Delivery).filter(Delivery.order_id == order_id).count()
         delivery_number = delivery_count + 1
+
+        # Save all uploaded files
+        saved_files = []
+        primary_filename = None
+        
+        for file in files:
+            filename = save_uploaded_file(file, "delivery")
+            file_path = UPLOAD_DIR / filename
+
+            with open(file_path, "wb") as f:
+                content = await file.read()
+                f.write(content)
+            
+            saved_files.append({
+                'filename': filename,
+                'original_filename': file.filename,
+                'size': len(content)
+            })
+            
+            if primary_filename is None:
+                primary_filename = filename
 
         # Create a new delivery record
         delivery = Delivery(
             order_id=order_id,
             delivery_number=delivery_number,
             response_text=response_text,
-            delivery_file=filename,
+            delivery_file=primary_filename,  # Keep for backward compatibility
             delivered_at=datetime.utcnow(),
             user_id=request.session.get("user_id")  # Admin who delivered
         )
         db.add(delivery)
+        db.flush()  # Flush to get delivery.id
+
+        # Create DeliveryFile records for all files
+        for file_info in saved_files:
+            delivery_file = DeliveryFile(
+                delivery_id=delivery.id,
+                filename=file_info['filename'],
+                original_filename=file_info['original_filename'],
+                file_size=file_info['size'],
+                uploaded_at=datetime.utcnow()
+            )
+            db.add(delivery_file)
 
         # Update order status
         order.status = "Delivered"
         order.response = response_text  # Keep for backward compatibility
-        order.delivery_file = filename  # Keep for backward compatibility
+        order.delivery_file = primary_filename  # Keep for backward compatibility
         
         # Create order event for delivery
         event = OrderEvent(
@@ -1046,8 +1073,8 @@ async def user_approve_delivery(request: Request, order_id: int):
     return RedirectResponse(url=f"/order/{order_id}", status_code=HTTP_302_FOUND)
 
 
-@app.get("/order/{order_id}/download-delivered-file/{delivery_id}")
-async def download_delivered_file(request: Request, order_id: int, delivery_id: int):
+@app.get("/order/{order_id}/download-delivered-file/{file_or_delivery_id}")
+async def download_delivered_file(request: Request, order_id: int, file_or_delivery_id: int):
     user_id = request.session.get("user_id")
     is_admin = request.session.get("is_admin")
     
@@ -1064,8 +1091,34 @@ async def download_delivered_file(request: Request, order_id: int, delivery_id: 
         if order.user_id != user_id and not is_admin:
             raise HTTPException(status_code=403, detail="Not authorized to download this file")
 
+        # First, try to find as a DeliveryFile
+        delivery_file = db.query(DeliveryFile).filter(
+            DeliveryFile.id == file_or_delivery_id
+        ).first()
+        
+        if delivery_file:
+            # Verify the delivery belongs to this order
+            delivery = db.query(Delivery).filter(
+                Delivery.id == delivery_file.delivery_id,
+                Delivery.order_id == order_id
+            ).first()
+            
+            if not delivery:
+                raise HTTPException(status_code=404, detail="Delivery file not found")
+            
+            file_path = BASE_DIR / "uploads" / delivery_file.filename
+            if not file_path.exists():
+                raise HTTPException(status_code=404, detail="File not found on server")
+            
+            return FileResponse(
+                path=str(file_path), 
+                filename=delivery_file.original_filename or delivery_file.filename, 
+                media_type="application/octet-stream"
+            )
+        
+        # Fallback: try as delivery_id (backward compatibility)
         delivery = db.query(Delivery).filter(
-            Delivery.id == delivery_id, 
+            Delivery.id == file_or_delivery_id, 
             Delivery.order_id == order_id
         ).first()
         
