@@ -40,3 +40,5 @@ class Order(Base):
     tags = relationship("Tag", back_populates="order")
     deliveries = relationship("Delivery", back_populates="order", cascade="all, delete-orphan")
     events = relationship("OrderEvent", back_populates="order", cascade="all, delete-orphan", order_by="OrderEvent.created_at.desc()")
+    messages = relationship("Message", back_populates="order", cascade="all, delete-orphan", order_by="Message.created_at.asc()")
+    notifications = relationship("Notification", back_populates="order", cascade="all, delete-orphan")

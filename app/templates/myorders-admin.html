@@ -324,11 +324,11 @@
         Admin
       </div>
       
-      {% if request.session.get('avatar_url') %}
+        {% if request.session.get('avatar_url') %}
         <img src="{{ request.session.get('avatar_url') }}" alt="{{ request.session.get('username') }}" class="profile-avatar-large">
-      {% else %}
+        {% else %}
         <div class="profile-avatar-large">{{ request.session.get('username', 'A')[0]|upper }}</div>
-      {% endif %}
+        {% endif %}
       
       <div class="profile-name">{{ request.session.get('username', 'Admin') }}</div>
       <div class="profile-handle">@{{ request.session.get('username', 'admin')|lower }}</div>
@@ -351,16 +351,8 @@
   <main class="dashboard-main">
     <div class="dashboard-header">
       <h1 class="dashboard-title">All Orders</h1>
-      <a href="/analytics" class="btn btn-primary">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="18" y1="20" x2="18" y2="10"></line>
-          <line x1="12" y1="20" x2="12" y2="4"></line>
-          <line x1="6" y1="20" x2="6" y2="14"></line>
-        </svg>
-        Analytics
-      </a>
-    </div>
-    
+</div>
+
     <div class="filters">
       <button class="filter-tab active" data-status="Active">Active</button>
       <button class="filter-tab" data-status="Revision">Revision</button>
@@ -369,58 +361,58 @@
       <button class="filter-tab" data-status="Completed">Completed</button>
       <button class="filter-tab" data-status="Cancelled">Cancelled</button>
       <button class="filter-tab" data-status="In dispute">In Dispute</button>
-    </div>
-    
+  </div>
+
     <div class="orders-grid" id="ordersGrid">
       {% if orders %}
-        {% for order in orders %}
+  {% for order in orders %}
         <div class="order-card" data-status="{{ order.status }}">
-          <div class="order-user">
+    <div class="order-user">
             {% if order.user and order.user.avatar %}
               <img src="{{ url_for('uploads', path=order.user.avatar) }}" alt="{{ order.user.username }}" class="order-user-avatar">
-            {% else %}
+      {% else %}
               <div class="order-user-avatar">{{ order.user.username[0]|upper if order.user else 'U' }}</div>
-            {% endif %}
+      {% endif %}
             
             <div class="order-user-info">
               <div class="order-username">{{ order.user.username if order.user else 'Unknown' }}</div>
               <div class="order-id">Order #{{ order.id }}</div>
             </div>
-          </div>
-          
-          <div class="order-price">${{ order.package.price if order.package else 'N/A' }}</div>
-          
-          {% if order.status in ['Active', 'Late', 'Revision'] %}
+    </div>
+    
+    <div class="order-price">${{ order.package.price if order.package else 'N/A' }}</div>
+    
+    {% if order.status in ['Active', 'Late', 'Revision'] %}
           <div class="order-time {% if order.status == 'Late' %}late{% else %}normal{% endif %}">
             <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path>
-            </svg>
-            {% if order.status == 'Late' %}
-              Late
-            {% elif order.due_date %}
+        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path>
+      </svg>
+      {% if order.status == 'Late' %}
+        Late
+      {% elif order.due_date %}
               <span data-countdown="{{ order.due_date.isoformat() }}"></span>
-            {% else %}
-              N/A
-            {% endif %}
-          </div>
-          {% else %}
+      {% else %}
+        N/A
+      {% endif %}
+    </div>
+    {% else %}
           <div class="order-time" style="visibility: hidden;">—</div>
-          {% endif %}
-          
-          <div class="order-status">
-            {% if order.status == 'Active' %}
+    {% endif %}
+    
+    <div class="order-status">
+      {% if order.status == 'Active' %}
               <span class="badge badge-active">Active</span>
-            {% elif order.status == 'Revision' %}
+      {% elif order.status == 'Revision' %}
               <span class="badge badge-revision">Revision</span>
-            {% elif order.status == 'Delivered' %}
+      {% elif order.status == 'Delivered' %}
               <span class="badge badge-delivered">Delivered</span>
-            {% elif order.status == 'Completed' %}
+      {% elif order.status == 'Completed' %}
               <span class="badge badge-completed">Completed</span>
-            {% elif order.status == 'Late' %}
+      {% elif order.status == 'Late' %}
               <span class="badge badge-late">Late</span>
-            {% elif order.status == 'Cancelled' %}
+      {% elif order.status == 'Cancelled' %}
               <span class="badge badge-cancelled">Cancelled</span>
-            {% elif order.status == 'In dispute' %}
+      {% elif order.status == 'In dispute' %}
               <span class="badge badge-dispute">In Dispute</span>
             {% else %}
               <span class="badge">{{ order.status }}</span>
@@ -461,8 +453,8 @@
           (status === 'In dispute' && cardStatus === 'In dispute');
         
         card.style.display = shouldShow ? 'flex' : 'none';
-      });
-    }
+  });
+}
     
     filterTabs.forEach(tab => {
       tab.addEventListener('click', () => {

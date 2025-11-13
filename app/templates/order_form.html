@@ -69,27 +69,27 @@
     align-items: center;
     justify-content: center;
     color: var(--brand);
-  }
-  
+}
+
   .tags-grid {
     display: grid;
     gap: var(--space-6);
-  }
-  
+}
+
   .tag-group {
     background: var(--bg-secondary);
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-xl);
     padding: var(--space-6);
-  }
-  
+}
+
   .tag-group-header {
     display: flex;
     align-items: center;
     gap: var(--space-3);
     margin-bottom: var(--space-4);
-  }
-  
+}
+
   .tag-number {
     width: 32px;
     height: 32px;
@@ -101,8 +101,8 @@
     justify-content: center;
     font-weight: 800;
     font-size: var(--text-sm);
-  }
-  
+}
+
   .tag-label {
     font-size: var(--text-lg);
     font-weight: 700;
@@ -112,14 +112,14 @@
   .tag-inputs {
     display: grid;
     gap: var(--space-4);
-  }
-  
+}
+
   .form-actions {
     display: flex;
     gap: var(--space-4);
     justify-content: flex-end;
-  }
-  
+}
+
   .btn-submit-order {
     padding: var(--space-4) var(--space-8);
     background: var(--brand);
@@ -140,6 +140,179 @@
     box-shadow: 0 0 40px rgba(226, 251, 82, 0.4);
     transform: translateY(-2px);
   }
+
+  .btn-submit-order:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  /* Payment Section Styles */
+  .payment-section {
+    background: var(--surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-2xl);
+    padding: var(--space-8);
+    margin-bottom: var(--space-6);
+  }
+
+  .payment-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-6);
+  }
+
+  .payment-status {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-lg);
+    background: var(--bg-secondary);
+  }
+
+  .payment-status.paid {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--accent-green);
+  }
+
+  .payment-status-icon {
+    width: 16px;
+    height: 16px;
+  }
+
+  .credit-card-form {
+    display: grid;
+    gap: var(--space-6);
+  }
+
+  .card-preview {
+    background: linear-gradient(135deg, #1a2235 0%, #0e1422 100%);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-xl);
+    padding: var(--space-6);
+    position: relative;
+    overflow: hidden;
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .card-preview::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(226, 251, 82, 0.1) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .card-chip {
+    width: 48px;
+    height: 36px;
+    background: linear-gradient(135deg, #d4af37 0%, #f4d03f 100%);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-4);
+    position: relative;
+    z-index: 1;
+  }
+
+  .card-number-display {
+    font-size: var(--text-2xl);
+    font-weight: 600;
+    letter-spacing: 2px;
+    color: var(--text-primary);
+    font-family: 'Courier New', monospace;
+    margin-bottom: var(--space-4);
+    position: relative;
+    z-index: 1;
+  }
+
+  .card-number-display.empty {
+    color: var(--text-tertiary);
+  }
+
+  .card-details {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    position: relative;
+    z-index: 1;
+  }
+
+  .card-holder-name {
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .card-holder-name.empty {
+    color: var(--text-tertiary);
+  }
+
+  .card-expiry {
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+    font-family: 'Courier New', monospace;
+  }
+
+  .card-expiry.empty {
+    color: var(--text-tertiary);
+  }
+
+  .payment-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-4);
+  }
+
+  .payment-form-grid.full-width {
+    grid-template-columns: 1fr;
+  }
+
+  .card-input-group {
+    position: relative;
+  }
+
+  .card-icon {
+    position: absolute;
+    right: var(--space-4);
+    top: 50%;
+    transform: translateY(-50%);
+    width: 24px;
+    height: 24px;
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  .card-input-group input:focus + .card-icon {
+    opacity: 1;
+  }
+
+  .payment-security {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-4);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    font-size: var(--text-xs);
+    color: var(--text-secondary);
+    margin-top: var(--space-2);
+  }
+
+  .payment-security svg {
+    width: 16px;
+    height: 16px;
+    color: var(--accent-green);
+  }
   
   @media (max-width: 768px) {
     .page-title {
@@ -152,18 +325,40 @@
     
     .form-actions {
       flex-direction: column-reverse;
-    }
-    
+}
+
     .btn-submit-order {
       width: 100%;
       justify-content: center;
     }
-  }
+
+    .payment-form-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .card-preview {
+      min-height: 180px;
+    }
+
+    .card-number-display {
+      font-size: var(--text-xl);
+    }
+}
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="order-form-container">
+  {% if error %}
+  <div class="alert alert-error" style="margin-bottom: var(--space-6); padding: var(--space-4); background: rgba(239, 68, 68, 0.1); border: 1px solid var(--accent-red); border-radius: var(--radius-lg); color: var(--accent-red); display: flex; align-items: center; gap: var(--space-2);">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="10"></circle>
+      <line x1="12" y1="8" x2="12" y2="12"></line>
+      <line x1="12" y1="16" x2="12.01" y2="16"></line>
+    </svg>
+    <span>{{ error }}</span>
+  </div>
+  {% endif %}
   <div class="page-header">
     <h1 class="page-title">Place Your Order</h1>
     
@@ -281,12 +476,128 @@
       </div>
     </div>
     
+    <!-- Payment Section -->
+    <div class="form-card payment-section">
+      <div class="payment-header">
+        <h2 class="form-section-title">
+          <span class="section-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+              <line x1="1" y1="10" x2="23" y2="10"></line>
+            </svg>
+          </span>
+          Payment Information
+        </h2>
+        <div class="payment-status" id="paymentStatus">
+          <svg class="payment-status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+          <span>Payment Required</span>
+        </div>
+      </div>
+
+      <!-- Credit Card Preview -->
+      <div class="card-preview">
+        <div class="card-chip"></div>
+        <div class="card-number-display empty" id="cardNumberDisplay">
+          •••• •••• •••• ••••
+        </div>
+        <div class="card-details">
+          <div>
+            <div class="card-holder-name empty" id="cardHolderDisplay">CARDHOLDER NAME</div>
+          </div>
+          <div class="card-expiry empty" id="cardExpiryDisplay">MM/YY</div>
+        </div>
+      </div>
+
+      <!-- Payment Form -->
+      <div class="credit-card-form">
+        <div class="form-group payment-form-grid full-width">
+          <label for="cardNumber" class="form-label">Card Number</label>
+          <div class="card-input-group">
+            <input 
+              type="text" 
+              id="cardNumber" 
+              name="card_number" 
+              class="form-input"
+              placeholder="1234 5678 9012 3456"
+              maxlength="19"
+              autocomplete="cc-number"
+              required
+            >
+            <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+              <line x1="1" y1="10" x2="23" y2="10"></line>
+            </svg>
+          </div>
+        </div>
+
+        <div class="form-group payment-form-grid full-width">
+          <label for="cardHolder" class="form-label">Cardholder Name</label>
+          <input 
+            type="text" 
+            id="cardHolder" 
+            name="card_holder" 
+            class="form-input"
+            placeholder="JOHN DOE"
+            autocomplete="cc-name"
+            required
+          >
+        </div>
+
+        <div class="form-group payment-form-grid">
+          <div>
+            <label for="cardExpiry" class="form-label">Expiry Date</label>
+            <input 
+              type="text" 
+              id="cardExpiry" 
+              name="card_expiry" 
+              class="form-input"
+              placeholder="MM/YY"
+              maxlength="5"
+              autocomplete="cc-exp"
+              required
+            >
+          </div>
+          <div>
+            <label for="cardCvv" class="form-label">CVV</label>
+            <div class="card-input-group">
+              <input 
+                type="text" 
+                id="cardCvv" 
+                name="card_cvv" 
+                class="form-input"
+                placeholder="123"
+                maxlength="4"
+                autocomplete="cc-csc"
+                required
+              >
+              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                <line x1="8" y1="21" x2="16" y2="21"></line>
+                <line x1="12" y1="17" x2="12" y2="21"></line>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="payment-security">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+          <span>Your payment information is secure and encrypted</span>
+        </div>
+      </div>
+    </div>
+    
     <!-- Form Actions -->
     <div class="form-actions">
       <a href="/order/new" class="btn btn-secondary">
         Back to Packages
       </a>
-      <button type="submit" class="btn-submit-order">
+      <button type="submit" class="btn-submit-order" id="submitButton" disabled>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
           <polyline points="22 4 12 14.01 9 11.01"></polyline>
@@ -296,4 +607,148 @@
     </div>
   </form>
 </div>
+
+<script>
+// Credit Card Formatting and Validation
+(function() {
+  const cardNumberInput = document.getElementById('cardNumber');
+  const cardHolderInput = document.getElementById('cardHolder');
+  const cardExpiryInput = document.getElementById('cardExpiry');
+  const cardCvvInput = document.getElementById('cardCvv');
+  const submitButton = document.getElementById('submitButton');
+  const paymentStatus = document.getElementById('paymentStatus');
+  
+  const cardNumberDisplay = document.getElementById('cardNumberDisplay');
+  const cardHolderDisplay = document.getElementById('cardHolderDisplay');
+  const cardExpiryDisplay = document.getElementById('cardExpiryDisplay');
+
+  // Format card number with spaces
+  cardNumberInput.addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\s/g, '').replace(/[^0-9]/gi, '');
+    let formattedValue = value.match(/.{1,4}/g)?.join(' ') || value;
+    e.target.value = formattedValue;
+    
+    // Update preview
+    if (value.length > 0) {
+      cardNumberDisplay.textContent = formattedValue.padEnd(19, '•');
+      cardNumberDisplay.classList.remove('empty');
+    } else {
+      cardNumberDisplay.textContent = '•••• •••• •••• ••••';
+      cardNumberDisplay.classList.add('empty');
+    }
+    
+    validatePayment();
+  });
+
+  // Format cardholder name (uppercase)
+  cardHolderInput.addEventListener('input', function(e) {
+    let value = e.target.value.toUpperCase();
+    e.target.value = value;
+    
+    // Update preview
+    if (value.length > 0) {
+      cardHolderDisplay.textContent = value;
+      cardHolderDisplay.classList.remove('empty');
+    } else {
+      cardHolderDisplay.textContent = 'CARDHOLDER NAME';
+      cardHolderDisplay.classList.add('empty');
+    }
+    
+    validatePayment();
+  });
+
+  // Format expiry date (MM/YY)
+  cardExpiryInput.addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.length >= 2) {
+      value = value.substring(0, 2) + '/' + value.substring(2, 4);
+    }
+    e.target.value = value;
+    
+    // Update preview
+    if (value.length === 5) {
+      cardExpiryDisplay.textContent = value;
+      cardExpiryDisplay.classList.remove('empty');
+    } else {
+      cardExpiryDisplay.textContent = 'MM/YY';
+      cardExpiryDisplay.classList.add('empty');
+    }
+    
+    validatePayment();
+  });
+
+  // Format CVV (numbers only)
+  cardCvvInput.addEventListener('input', function(e) {
+    e.target.value = e.target.value.replace(/\D/g, '');
+    validatePayment();
+  });
+
+  // Validate payment form
+  function validatePayment() {
+    const cardNumber = cardNumberInput.value.replace(/\s/g, '');
+    const cardHolder = cardHolderInput.value.trim();
+    const cardExpiry = cardExpiryInput.value;
+    const cardCvv = cardCvvInput.value;
+
+    // Basic validation
+    const isCardNumberValid = cardNumber.length >= 13 && cardNumber.length <= 19 && /^\d+$/.test(cardNumber);
+    const isCardHolderValid = cardHolder.length >= 3;
+    const isExpiryValid = /^\d{2}\/\d{2}$/.test(cardExpiry);
+    const isCvvValid = cardCvv.length >= 3 && cardCvv.length <= 4 && /^\d+$/.test(cardCvv);
+
+    // Validate expiry date
+    let isExpiryDateValid = false;
+    if (isExpiryValid) {
+      const [month, year] = cardExpiry.split('/').map(Number);
+      const currentDate = new Date();
+      const currentYear = currentDate.getFullYear() % 100;
+      const currentMonth = currentDate.getMonth() + 1;
+      
+      if (month >= 1 && month <= 12) {
+        if (year > currentYear || (year === currentYear && month >= currentMonth)) {
+          isExpiryDateValid = true;
+        }
+      }
+    }
+
+    const isValid = isCardNumberValid && isCardHolderValid && isExpiryValid && isExpiryDateValid && isCvvValid;
+
+    if (isValid) {
+      submitButton.disabled = false;
+      paymentStatus.classList.add('paid');
+      paymentStatus.innerHTML = `
+        <svg class="payment-status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+          <polyline points="22 4 12 14.01 9 11.01"></polyline>
+        </svg>
+        <span>Payment Ready</span>
+      `;
+    } else {
+      submitButton.disabled = true;
+      paymentStatus.classList.remove('paid');
+      paymentStatus.innerHTML = `
+        <svg class="payment-status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <polyline points="12 6 12 12 16 14"></polyline>
+        </svg>
+        <span>Payment Required</span>
+      `;
+    }
+
+    return isValid;
+  }
+
+  // Validate on form submit
+  document.querySelector('form').addEventListener('submit', function(e) {
+    if (!validatePayment()) {
+      e.preventDefault();
+      alert('Please complete all payment fields correctly before submitting your order.');
+      return false;
+    }
+  });
+
+  // Initial validation
+  validatePayment();
+})();
+</script>
 {% endblock %}

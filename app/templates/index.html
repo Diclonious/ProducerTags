@@ -348,7 +348,7 @@
 
 {% block content %}
 <!-- Hero Section -->
-<section class="hero">
+  <section class="hero">
   <div class="hero-content">
     <div class="hero-badge">
       <span class="hero-badge-dot"></span>
@@ -407,8 +407,8 @@
         <div class="hero-stat-label">Fast Turnaround</div>
       </div>
     </div>
-  </div>
-</section>
+    </div>
+  </section>
 
 <!-- Reviews Section -->
 <section id="reviews" class="reviews-section">
@@ -448,7 +448,7 @@
       <div class="review-rating">
         {% for i in range(5) %}
           <span class="star {% if i >= order.review %}star-empty{% endif %}">★</span>
-        {% endfor %}
+      {% endfor %}
       </div>
       
       {% if order.review_text %}

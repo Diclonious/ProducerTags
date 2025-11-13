@@ -20,6 +20,8 @@ class User(Base):
     is_admin = Column(Boolean, default=False)
     avatar = Column(String(255), nullable=True)
     orders = relationship("Order", back_populates="user")
+    messages = relationship("Message", back_populates="sender", cascade="all, delete-orphan")
+    notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
 
     def set_password(self, password: str):
         # Argon2 has no 72-byte limit, so no truncation needed

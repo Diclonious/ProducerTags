@@ -16,6 +16,8 @@ from app.domain.Order import Order
 from app.domain.Tag import Tag
 from app.domain.Delivery import Delivery
 from app.domain.OrderEvent import OrderEvent
+from app.domain.Message import Message
+from app.domain.Notification import Notification
 from fastapi.staticfiles import StaticFiles
 
 app = FastAPI()
@@ -45,6 +47,8 @@ def startup_event():
     from app.domain.Tag import Tag
     from app.domain.Delivery import Delivery
     from app.domain.OrderEvent import OrderEvent
+    from app.domain.Message import Message
+    from app.domain.Notification import Notification
     
     db = SessionLocal()
     
@@ -176,6 +180,32 @@ def auto_complete_delivered_orders(db):
         if latest_delivery and latest_delivery.delivered_at <= cutoff_time:
             order.status = "Completed"
             order.completed_date = datetime.utcnow()
+            
+            # Create order event for auto-completion
+            event = OrderEvent(
+                order_id=order.id,
+                event_type="auto_completed",
+                user_id=None,  # System action
+                event_message="Order automatically completed after 72 hours",
+                created_at=datetime.utcnow()
+            )
+            db.add(event)
+            
+            # Notify user
+            create_notification(
+                db, order.user_id, order.id, "order_auto_completed",
+                "Order Auto-Completed",
+                f"Your order #{order.id} was automatically completed after 72 hours"
+            )
+            
+            # Notify admin
+            admins = db.query(User).filter(User.is_admin == True).all()
+            for admin in admins:
+                create_notification(
+                    db, admin.id, order.id, "order_auto_completed",
+                    "Order Auto-Completed",
+                    f"Order #{order.id} was automatically completed after 72 hours"
+                )
     
     db.commit()
 
@@ -228,6 +258,22 @@ def save_uploaded_file(file: UploadFile, prefix: str = "", user_id: int = None) 
     
     file_path = upload_dir / filename
     return filename
+
+
+def create_notification(db, user_id, order_id, notification_type, title, message):
+    """Helper function to create notifications"""
+    notification = Notification(
+        user_id=user_id,
+        order_id=order_id,
+        notification_type=notification_type,
+        title=title,
+        message=message,
+        is_read=False,
+        created_at=datetime.utcnow()
+    )
+    db.add(notification)
+    db.commit()
+    return notification
 
 
 def calculate_chart_data(db, range_q="monthly"):
@@ -481,21 +527,108 @@ async def select_package(request: Request, package_id: int = Form(...)):
 
 
 @app.post("/order/submit")
-async def submit_order(request: Request, package_id: int = Form(...), details: str = Form(None)):
+async def submit_order(
+    request: Request, 
+    package_id: int = Form(...), 
+    details: str = Form(None),
+    card_number: str = Form(...),
+    card_holder: str = Form(...),
+    card_expiry: str = Form(...),
+    card_cvv: str = Form(...)
+):
     user_id = request.session.get("user_id")
     if not user_id:
         return RedirectResponse(url="/login", status_code=HTTP_302_FOUND)
 
-    form = await request.form()
-    tags = [t.strip() for t in form.getlist("tags") if t.strip()]
-    moods = [m.strip() for m in form.getlist("moods")]
-
+    # Validate payment information
+    card_number_clean = card_number.replace(" ", "").replace("-", "")
+    card_expiry_clean = card_expiry.replace("/", "")
+    
     db = SessionLocal()
     try:
         package = db.query(Package).filter(Package.id == package_id).first()
         if not package:
             return RedirectResponse(url="/order/new", status_code=HTTP_302_FOUND)
+        
+        # Basic payment validation
+        if not card_number_clean or len(card_number_clean) < 13 or len(card_number_clean) > 19:
+            return templates.TemplateResponse(
+                "order_form.html",
+                {
+                    "request": request,
+                    "package": package,
+                    "error": "Invalid card number. Please check your payment information."
+                }
+            )
+        
+        if not card_holder or len(card_holder.strip()) < 3:
+            return templates.TemplateResponse(
+                "order_form.html",
+                {
+                    "request": request,
+                    "package": package,
+                    "error": "Invalid cardholder name. Please check your payment information."
+                }
+            )
+        
+        if not card_expiry_clean or len(card_expiry_clean) != 4:
+            return templates.TemplateResponse(
+                "order_form.html",
+                {
+                    "request": request,
+                    "package": package,
+                    "error": "Invalid expiry date. Please use MM/YY format."
+                }
+            )
+        
+        # Validate expiry date is not in the past
+        try:
+            expiry_month = int(card_expiry_clean[:2])
+            expiry_year = int(card_expiry_clean[2:])
+            current_date = datetime.utcnow()
+            current_year = current_date.year % 100
+            current_month = current_date.month
+            
+            if expiry_month < 1 or expiry_month > 12:
+                raise ValueError("Invalid month")
+            
+            if expiry_year < current_year or (expiry_year == current_year and expiry_month < current_month):
+                return templates.TemplateResponse(
+                    "order_form.html",
+                    {
+                        "request": request,
+                        "package": package,
+                        "error": "Card has expired. Please use a valid card."
+                    }
+                )
+        except (ValueError, IndexError):
+            return templates.TemplateResponse(
+                "order_form.html",
+                {
+                    "request": request,
+                    "package": package,
+                    "error": "Invalid expiry date format. Please use MM/YY format."
+                }
+            )
+        
+        if not card_cvv or len(card_cvv) < 3 or len(card_cvv) > 4:
+            return templates.TemplateResponse(
+                "order_form.html",
+                {
+                    "request": request,
+                    "package": package,
+                    "error": "Invalid CVV. Please check your payment information."
+                }
+            )
 
+        form = await request.form()
+        tags = [t.strip() for t in form.getlist("tags") if t.strip()]
+        moods = [m.strip() for m in form.getlist("moods")]
+
+        # Payment validated - proceed with order creation
+        # Note: In a real application, you would process the payment through a payment gateway
+        # Here we just validate the format and proceed
+        
         due_date = datetime.utcnow() + timedelta(days=package.delivery_days)
         order = Order(user_id=user_id, package_id=package.id, details=details, due_date=due_date, status="Active")
         db.add(order)
@@ -505,6 +638,15 @@ async def submit_order(request: Request, package_id: int = Form(...), details: s
         for tag_value, mood_value in zip(tags, moods):
             db.add(Tag(order_id=order.id, name=tag_value, mood=mood_value))
         db.commit()
+        
+        # Get admin users
+        admins = db.query(User).filter(User.is_admin == True).all()
+        for admin in admins:
+            create_notification(
+                db, admin.id, order.id, "order_placed",
+                "New Order Placed",
+                f"{db.query(User).filter(User.id == user_id).first().username} placed a new order (#{order.id})"
+            )
     finally:
         db.close()
 
@@ -618,7 +760,8 @@ async def view_order(request: Request, order_id: int):
                 joinedload(Order.user), 
                 joinedload(Order.package), 
                 joinedload(Order.deliveries).joinedload(Delivery.user),
-                joinedload(Order.events).joinedload(OrderEvent.user)
+                joinedload(Order.events).joinedload(OrderEvent.user),
+                joinedload(Order.messages).joinedload(Message.sender)
             )
             .filter(Order.id == order_id)
             .first()
@@ -677,16 +820,43 @@ async def view_order(request: Request, order_id: int):
         # Sort by date chronologically (oldest first) - this ensures deliveries appear in order
         # and events appear in chronological order relative to deliveries
         # Use timestamp comparison to ensure proper ordering
+        # For events with the same timestamp, ensure delivery_date_updated comes after request_approved
         def get_sort_key(item):
             date = item['date']
             if date is None:
-                return datetime.min
+                date = datetime.min
             # Ensure we're comparing datetime objects properly
-            if isinstance(date, datetime):
-                return date
-            return datetime.min
+            if not isinstance(date, datetime):
+                date = datetime.min
+            
+            # Secondary sort key: for events with same timestamp, ensure delivery_date_updated 
+            # comes after request_approved
+            priority = 0
+            if item.get('type') == 'event':
+                event = item.get('event')
+                if event:
+                    if event.event_type == 'delivery_date_updated':
+                        priority = 1  # Higher priority = appears later when timestamps are equal
+                    elif event.event_type == 'request_approved':
+                        priority = 0  # Lower priority = appears first when timestamps are equal
+            
+            # Return tuple: (date, priority) - items with same date will be sorted by priority
+            return (date, priority)
         
         timeline_items.sort(key=get_sort_key, reverse=False)
+
+        # Mark messages as read for the current user
+        if order.messages:
+            for msg in order.messages:
+                if msg.sender_id != user_id and not msg.is_read:
+                    msg.is_read = True
+            db.commit()
+
+        # Get admin user for seller information (for non-admin users)
+        admin_user = None
+        if not request.session.get("is_admin"):
+            # Get the first admin user (or the admin who created the order if applicable)
+            admin_user = db.query(User).filter(User.is_admin == True).first()
 
         return templates.TemplateResponse(
             "order_detail.html",
@@ -696,6 +866,8 @@ async def view_order(request: Request, order_id: int):
                 "file_url": file_url,
                 "is_admin": request.session.get("is_admin", False),
                 "timeline_items": timeline_items,
+                "messages": order.messages if order.messages else [],
+                "admin_user": admin_user,  # Pass admin user to template
             }
         )
     finally:
@@ -728,6 +900,15 @@ async def mark_order_complete(request: Request, order_id: int):
         )
         db.add(event)
         db.commit()
+        
+        # Notify admin
+        admins = db.query(User).filter(User.is_admin == True).all()
+        for admin in admins:
+            create_notification(
+                db, admin.id, order.id, "order_completed",
+                "Order Completed",
+                f"Order #{order.id} was marked as complete"
+            )
     finally:
         db.close()
 
@@ -789,6 +970,13 @@ async def admin_deliver_order(
         )
         db.add(event)
         db.commit()
+        
+        # Notify customer
+        create_notification(
+            db, order.user_id, order.id, "delivered",
+            "Order Delivered",
+            f"Your order #{order.id} has been delivered!"
+        )
     finally:
         db.close()
 
@@ -824,6 +1012,15 @@ async def user_request_revision(request: Request, order_id: int, revision_text: 
         )
         db.add(event)
         db.commit()
+        
+        # Notify admin
+        admins = db.query(User).filter(User.is_admin == True).all()
+        for admin in admins:
+            create_notification(
+                db, admin.id, order.id, "revision_requested",
+                "Revision Requested",
+                f"{db.query(User).filter(User.id == user_id).first().username} requested a revision on order #{order.id}"
+            )
     finally:
         db.close()
 
@@ -958,6 +1155,15 @@ async def submit_review(request: Request, order_id: int, review_text: str = Form
         order.review = rating
         order.review_text = review_text
         db.commit()
+        
+        # Notify admin
+        admins = db.query(User).filter(User.is_admin == True).all()
+        for admin in admins:
+            create_notification(
+                db, admin.id, order.id, "review_left",
+                f"{rating}-Star Review",
+                f"{db.query(User).filter(User.id == user_id).first().username} left a review on order #{order.id}"
+            )
     finally:
         db.close()
 
@@ -1094,6 +1300,41 @@ async def submit_resolution_request(
         )
         db.add(event)
         db.commit()
+        
+        # Notify the other party
+        is_admin = request.session.get("is_admin", False)
+        if is_admin:
+            # Admin requesting → notify user
+            admin_user = db.query(User).filter(User.id == user_id).first()
+            admin_username = admin_user.username if admin_user else "Admin"
+            if request_type == "extend_delivery":
+                create_notification(
+                    db, order.user_id, order.id, "extension_requested",
+                    "Extension Requested",
+                    f"{admin_username} requested a {extension_days}-day extension for order #{order.id}"
+                )
+            elif request_type == "cancellation":
+                create_notification(
+                    db, order.user_id, order.id, "cancellation_requested",
+                    "Cancellation Requested",
+                    f"{admin_username} requested to cancel order #{order.id}"
+                )
+        else:
+            # User requesting → notify admin
+            admins = db.query(User).filter(User.is_admin == True).all()
+            for admin in admins:
+                if request_type == "revision":
+                    create_notification(
+                        db, admin.id, order.id, "revision_requested",
+                        "Revision Requested",
+                        f"{db.query(User).filter(User.id == user_id).first().username} requested a revision on order #{order.id}"
+                    )
+                elif request_type == "cancellation":
+                    create_notification(
+                        db, admin.id, order.id, "cancellation_requested",
+                        "Cancellation Requested",
+                        f"{db.query(User).filter(User.id == user_id).first().username} requested to cancel order #{order.id}"
+                    )
     finally:
         db.close()
 
@@ -1134,10 +1375,35 @@ async def approve_request(request: Request, order_id: int):
         elif order.request_type == "cancellation":
             order.status = "Cancelled"
             order.cancelled_date = datetime.utcnow()
+            
+            # Create cancellation approved event
+            cancellation_event = OrderEvent(
+                order_id=order.id,
+                event_type="cancellation_approved",
+                user_id=user_id,
+                event_message=order.cancellation_message or order.cancellation_reason or "Cancellation request was approved",
+                cancellation_reason=order.cancellation_reason,
+                cancellation_message=order.cancellation_message,
+                created_at=datetime.utcnow()
+            )
+            db.add(cancellation_event)
         elif order.request_type == "extend_delivery":
             # Extend the due date
             if order.extension_days and order.extension_days > 0:
+                old_due_date = order.due_date
                 order.due_date = order.due_date + timedelta(days=order.extension_days)
+                
+                # Create delivery date update event after extension approval
+                delivery_update_event = OrderEvent(
+                    order_id=order.id,
+                    event_type="delivery_date_updated",
+                    user_id=user_id,
+                    event_message=f"Delivery date updated to {order.due_date.strftime('%B %d, %Y')}",
+                    extension_days=order.extension_days,
+                    extension_reason=order.extension_reason,
+                    created_at=datetime.utcnow()
+                )
+                db.add(delivery_update_event)
             order.status = "Active"
 
         # Create order event for approved request
@@ -1165,6 +1431,39 @@ async def approve_request(request: Request, order_id: int):
         order.requested_by_admin = None
 
         db.commit()
+        
+        # Notify the requester
+        notify_user_id = order.user_id if requested_by_admin else order.user_id
+        if requested_by_admin:
+            # Admin requested, user approved → notify admin
+            notify_user_id = request.session.get("user_id") if not is_admin else order.user_id
+            admins = db.query(User).filter(User.is_admin == True).all()
+            for admin in admins:
+                create_notification(
+                    db, admin.id, order.id, f"{request_type}_approved",
+                    f"{request_type.replace('_', ' ').title()} Approved",
+                    f"Your {request_type.replace('_', ' ')} request for order #{order.id} was approved"
+                )
+        else:
+            # User requested, admin approved → notify user
+            if request_type == "extension":
+                create_notification(
+                    db, order.user_id, order.id, "extension_approved",
+                    "Extension Approved",
+                    f"Your delivery extension request for order #{order.id} was approved"
+                )
+            elif request_type == "revision":
+                create_notification(
+                    db, order.user_id, order.id, "revision_approved",
+                    "Revision Approved",
+                    f"Your revision request for order #{order.id} was approved"
+                )
+            elif request_type == "cancellation":
+                create_notification(
+                    db, order.user_id, order.id, "cancellation_approved",
+                    "Cancellation Approved",
+                    f"Your cancellation request for order #{order.id} was approved"
+                )
     finally:
         db.close()
 
@@ -1233,6 +1532,37 @@ async def reject_request(request: Request, order_id: int):
         order.requested_by_admin = None
 
         db.commit()
+        
+        # Notify the requester
+        if requested_by_admin:
+            # Admin requested, user rejected → notify admin
+            admins = db.query(User).filter(User.is_admin == True).all()
+            for admin in admins:
+                create_notification(
+                    db, admin.id, order.id, f"{request_type}_rejected",
+                    f"{request_type.replace('_', ' ').title()} Rejected",
+                    f"Your {request_type.replace('_', ' ')} request for order #{order.id} was rejected"
+                )
+        else:
+            # User requested, admin rejected → notify user
+            if request_type == "extend_delivery":
+                create_notification(
+                    db, order.user_id, order.id, "extension_rejected",
+                    "Extension Rejected",
+                    f"Your delivery extension request for order #{order.id} was rejected"
+                )
+            elif request_type == "revision":
+                create_notification(
+                    db, order.user_id, order.id, "revision_rejected",
+                    "Revision Rejected",
+                    f"Your revision request for order #{order.id} was rejected"
+                )
+            elif request_type == "cancellation":
+                create_notification(
+                    db, order.user_id, order.id, "cancellation_rejected",
+                    "Cancellation Rejected",
+                    f"Your cancellation request for order #{order.id} was rejected"
+                )
     finally:
         db.close()
 
@@ -1288,6 +1618,426 @@ async def edit_package_submit(request: Request, package_id: int, name: str = For
     finally:
         db.close()
     return RedirectResponse("/packages", status_code=HTTP_302_FOUND)
+
+
+# -------------------- MESSAGING --------------------
+
+@app.post("/order/{order_id}/messages/send")
+async def send_message(
+    request: Request,
+    order_id: int,
+    message_text: str = Form(None)
+):
+    """Send a message in order chat"""
+    user_id = request.session.get("user_id")
+    if not user_id:
+        # Check if AJAX request
+        content_type = request.headers.get("content-type", "")
+        if "application/json" in content_type:
+            raise HTTPException(status_code=401, detail="Not authenticated")
+        return RedirectResponse("/login", status_code=HTTP_302_FOUND)
+    
+    db = SessionLocal()
+    try:
+        # Verify order access
+        order = db.query(Order).filter(Order.id == order_id).first()
+        if not order:
+            raise HTTPException(status_code=404, detail="Order not found")
+        
+        # Check permission
+        is_admin = request.session.get("is_admin", False)
+        if not is_admin and order.user_id != user_id:
+            raise HTTPException(status_code=403, detail="Forbidden")
+        
+        # Get message text from form data
+        if message_text is None:
+            try:
+                form_data = await request.form()
+                message_text = form_data.get("message_text", "")
+            except:
+                # Try JSON as fallback
+                try:
+                    body = await request.json()
+                    message_text = body.get("message_text", "")
+                except:
+                    message_text = ""
+        
+        if not message_text or not message_text.strip():
+            raise HTTPException(status_code=400, detail="Message text is required")
+        
+        # Create message
+        message = Message(
+            order_id=order_id,
+            sender_id=user_id,
+            message_text=message_text.strip(),
+            created_at=datetime.utcnow(),
+            is_read=False
+        )
+        db.add(message)
+        db.commit()
+        db.refresh(message)
+        
+        # Load sender info
+        db.refresh(message)
+        sender = db.query(User).filter(User.id == user_id).first()
+        
+        # Check if AJAX request (check for JSON content-type or Accept header)
+        accept_header = request.headers.get("accept", "")
+        content_type = request.headers.get("content-type", "")
+        
+        if "application/json" in accept_header or "application/json" in content_type:
+            # Return JSON for AJAX requests
+            from fastapi.responses import JSONResponse
+            return JSONResponse(content={
+                "success": True,
+                "message": {
+                    "id": message.id,
+                    "order_id": message.order_id,
+                    "sender_id": message.sender_id,
+                    "sender_name": sender.username if sender else "User",
+                    "sender_avatar": sender.avatar if sender else None,
+                    "message_text": message.message_text,
+                    "created_at": message.created_at.strftime("%b %d, %I:%M %p") if message.created_at else "",
+                    "is_read": message.is_read
+                }
+            })
+        else:
+            # Return redirect for form submissions
+            return RedirectResponse(f"/order/{order_id}#chat", status_code=HTTP_302_FOUND)
+    finally:
+        db.close()
+
+
+@app.get("/order/{order_id}/messages")
+async def get_messages(request: Request, order_id: int):
+    """Get all messages for an order (AJAX endpoint)"""
+    user_id = request.session.get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    db = SessionLocal()
+    try:
+        # Verify order access
+        order = db.query(Order).filter(Order.id == order_id).first()
+        if not order:
+            raise HTTPException(status_code=404, detail="Order not found")
+        
+        # Check permission
+        is_admin = request.session.get("is_admin", False)
+        if not is_admin and order.user_id != user_id:
+            raise HTTPException(status_code=403, detail="Forbidden")
+        
+        # Get messages with sender info
+        messages = (
+            db.query(Message)
+            .options(joinedload(Message.sender))
+            .filter(Message.order_id == order_id)
+            .order_by(Message.created_at.asc())
+            .all()
+        )
+        
+        # Mark as read
+        for msg in messages:
+            if msg.sender_id != user_id and not msg.is_read:
+                msg.is_read = True
+        db.commit()
+        
+        # Convert to JSON
+        messages_data = []
+        for msg in messages:
+            messages_data.append({
+                "id": msg.id,
+                "sender_id": msg.sender_id,
+                "sender_name": msg.sender.username if msg.sender else "User",
+                "sender_avatar": msg.sender.avatar if msg.sender else None,
+                "message_text": msg.message_text,
+                "created_at": msg.created_at.strftime("%b %d, %I:%M %p") if msg.created_at else "",
+                "is_admin": msg.sender.is_admin if msg.sender else False
+            })
+        
+        from fastapi.responses import JSONResponse
+        return JSONResponse(content={"messages": messages_data})
+    finally:
+        db.close()
+
+
+# -------------------- NOTIFICATIONS --------------------
+
+@app.get("/notifications")
+async def get_notifications(request: Request):
+    """Get all notifications for current user (AJAX endpoint)"""
+    user_id = request.session.get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    db = SessionLocal()
+    try:
+        notifications = (
+            db.query(Notification)
+            .filter(Notification.user_id == user_id)
+            .order_by(Notification.created_at.desc())
+            .limit(50)
+            .all()
+        )
+        
+        notifications_data = []
+        for notif in notifications:
+            notifications_data.append({
+                "id": notif.id,
+                "order_id": notif.order_id,
+                "type": notif.notification_type,
+                "title": notif.title,
+                "message": notif.message,
+                "is_read": notif.is_read,
+                "created_at": notif.created_at.strftime("%b %d, %I:%M %p") if notif.created_at else "",
+                "time_ago": get_time_ago(notif.created_at) if notif.created_at else "Just now"
+            })
+        
+        from fastapi.responses import JSONResponse
+        return JSONResponse(content={"notifications": notifications_data})
+    finally:
+        db.close()
+
+
+@app.get("/notifications/unread-count")
+async def get_unread_count(request: Request):
+    """Get count of unread notifications"""
+    user_id = request.session.get("user_id")
+    if not user_id:
+        from fastapi.responses import JSONResponse
+        return JSONResponse(content={"count": 0})
+    
+    db = SessionLocal()
+    try:
+        count = db.query(Notification).filter(
+            Notification.user_id == user_id,
+            Notification.is_read == False
+        ).count()
+        
+        from fastapi.responses import JSONResponse
+        return JSONResponse(content={"count": count})
+    finally:
+        db.close()
+
+
+@app.get("/messages/unread-count")
+async def get_unread_messages_count(request: Request):
+    """Get count of unread messages for current user"""
+    user_id = request.session.get("user_id")
+    if not user_id:
+        from fastapi.responses import JSONResponse
+        return JSONResponse(content={"count": 0})
+    
+    db = SessionLocal()
+    try:
+        is_admin = request.session.get("is_admin", False)
+        
+        # Get unread messages where user is the recipient (not sender)
+        query = db.query(Message).join(Order).filter(
+            Message.is_read == False,
+            Message.sender_id != user_id
+        )
+        
+        if not is_admin:
+            # Regular users only see messages from their orders
+            query = query.filter(Order.user_id == user_id)
+        
+        count = query.count()
+        
+        from fastapi.responses import JSONResponse
+        return JSONResponse(content={"count": count})
+    finally:
+        db.close()
+
+
+@app.get("/messages/notifications")
+async def get_message_notifications(request: Request):
+    """Get recent messages grouped by sender and order (AJAX endpoint)"""
+    user_id = request.session.get("user_id")
+    if not user_id:
+        from fastapi.responses import JSONResponse
+        return JSONResponse(content={"messages": []})
+    
+    db = SessionLocal()
+    try:
+        is_admin = request.session.get("is_admin", False)
+        
+        # Get all messages where user is the recipient (both read and unread)
+        query = db.query(Message).join(Order).options(
+            joinedload(Message.sender),
+            joinedload(Message.order)
+        ).filter(
+            Message.sender_id != user_id
+        )
+        
+        if not is_admin:
+            # Regular users only see messages from their orders
+            query = query.filter(Order.user_id == user_id)
+        
+        # Get recent messages (limit to 50 to ensure we have enough for grouping)
+        all_messages = query.order_by(Message.created_at.desc()).limit(50).all()
+        
+        # Group messages by (sender_id, order_id)
+        message_groups = {}
+        for msg in all_messages:
+            key = (msg.sender_id, msg.order_id)
+            if key not in message_groups:
+                message_groups[key] = {
+                    "messages": [],
+                    "unread_count": 0,
+                    "latest_message": None
+                }
+            
+            message_groups[key]["messages"].append(msg)
+            
+            # Count unread messages
+            if not msg.is_read:
+                message_groups[key]["unread_count"] += 1
+            
+            # Track latest message (most recent)
+            if (message_groups[key]["latest_message"] is None or 
+                (msg.created_at and message_groups[key]["latest_message"].created_at and
+                 msg.created_at > message_groups[key]["latest_message"].created_at)):
+                message_groups[key]["latest_message"] = msg
+        
+        # Convert groups to list with sorting data
+        grouped_messages = []
+        for key, group_data in message_groups.items():
+            latest_msg = group_data["latest_message"]
+            if latest_msg:
+                # Calculate timestamp for sorting
+                msg_timestamp = latest_msg.created_at.timestamp() if latest_msg.created_at else 0
+                
+                grouped_messages.append({
+                    "sender_id": latest_msg.sender_id,
+                    "order_id": latest_msg.order_id,
+                    "sender_name": latest_msg.sender.username if latest_msg.sender else "User",
+                    "sender_avatar": latest_msg.sender.avatar if latest_msg.sender else None,
+                    "message_text": latest_msg.message_text[:100] + "..." if len(latest_msg.message_text) > 100 else latest_msg.message_text,
+                    "created_at": latest_msg.created_at.strftime("%b %d, %I:%M %p") if latest_msg.created_at else "",
+                    "time_ago": get_time_ago(latest_msg.created_at) if latest_msg.created_at else "Just now",
+                    "unread_count": group_data["unread_count"],
+                    "has_unread": group_data["unread_count"] > 0,
+                    "latest_message_id": latest_msg.id,
+                    "_sort_timestamp": msg_timestamp  # For sorting
+                })
+        
+        # Sort: groups with unread first, then by latest message date (newest first)
+        grouped_messages_sorted = sorted(
+            grouped_messages,
+            key=lambda x: (
+                not x["has_unread"],  # False (unread) comes before True (all read) - unread first
+                -x["_sort_timestamp"]  # Negate for descending (newest first)
+            )
+        )
+        
+        # Remove sorting helper field
+        for msg in grouped_messages_sorted:
+            del msg["_sort_timestamp"]
+        
+        from fastapi.responses import JSONResponse
+        return JSONResponse(content={"messages": grouped_messages_sorted})
+    except Exception as e:
+        # Fallback: return empty list on error
+        from fastapi.responses import JSONResponse
+        return JSONResponse(content={"messages": []})
+    finally:
+        db.close()
+
+
+@app.post("/notifications/{notification_id}/mark-read")
+async def mark_notification_read(request: Request, notification_id: int):
+    """Mark a notification as read"""
+    user_id = request.session.get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    db = SessionLocal()
+    try:
+        notification = db.query(Notification).filter(
+            Notification.id == notification_id,
+            Notification.user_id == user_id
+        ).first()
+        
+        if notification:
+            notification.is_read = True
+            db.commit()
+        
+        from fastapi.responses import JSONResponse
+        return JSONResponse(content={"success": True})
+    finally:
+        db.close()
+
+
+@app.post("/notifications/mark-all-read")
+async def mark_all_notifications_read(request: Request):
+    """Mark all notifications as read"""
+    user_id = request.session.get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    db = SessionLocal()
+    try:
+        db.query(Notification).filter(
+            Notification.user_id == user_id,
+            Notification.is_read == False
+        ).update({"is_read": True})
+        db.commit()
+        
+        from fastapi.responses import JSONResponse
+        return JSONResponse(content={"success": True})
+    finally:
+        db.close()
+
+
+@app.post("/messages/mark-all-read")
+async def mark_all_messages_read(request: Request):
+    """Mark all messages as read for current user"""
+    user_id = request.session.get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    db = SessionLocal()
+    try:
+        is_admin = request.session.get("is_admin", False)
+        
+        # Get messages where user is the recipient
+        query = db.query(Message).join(Order).filter(
+            Message.is_read == False,
+            Message.sender_id != user_id
+        )
+        
+        if not is_admin:
+            # Regular users only see messages from their orders
+            query = query.filter(Order.user_id == user_id)
+        
+        # Mark all as read
+        query.update({"is_read": True})
+        db.commit()
+        
+        from fastapi.responses import JSONResponse
+        return JSONResponse(content={"success": True})
+    finally:
+        db.close()
+
+
+def get_time_ago(dt):
+    """Get human-readable time difference"""
+    now = datetime.utcnow()
+    diff = now - dt
+    
+    if diff.days > 7:
+        return dt.strftime("%b %d")
+    elif diff.days > 0:
+        return f"{diff.days}d ago"
+    elif diff.seconds >= 3600:
+        hours = diff.seconds // 3600
+        return f"{hours}h ago"
+    elif diff.seconds >= 60:
+        minutes = diff.seconds // 60
+        return f"{minutes}m ago"
+    else:
+        return "Just now"
 
 
 # -------------------- ANALYTICS (Admin) --------------------
