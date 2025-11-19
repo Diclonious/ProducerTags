@@ -928,7 +928,7 @@ async def admin_deliver_order(
     db = SessionLocal()
     try:
         order = db.query(Order).filter(Order.id == order_id).first()
-        if not order or order.status not in ["Active", "Revision"]:
+        if not order or order.status not in ["Active", "Revision", "Late"]:
             raise HTTPException(status_code=400, detail="Cannot deliver in this state")
 
         if not files:

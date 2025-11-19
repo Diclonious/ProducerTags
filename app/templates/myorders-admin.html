@@ -134,6 +134,7 @@
     display: flex;
     gap: var(--space-3);
     flex-wrap: wrap;
+    margin-bottom: var(--space-6);
   }
   
   .filter-tab {
@@ -157,6 +158,42 @@
     background: var(--brand);
     color: var(--text-inverse);
     border-color: var(--brand);
+  }
+  
+  .subcategory-section {
+    margin-top: var(--space-6);
+    margin-bottom: var(--space-4);
+  }
+  
+  .subcategory-header {
+    font-size: var(--text-lg);
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: var(--space-4);
+    padding-bottom: var(--space-2);
+    border-bottom: 2px solid var(--border-default);
+  }
+  
+  .subcategory-header.hidden {
+    display: none;
+  }
+  
+  .active-orders-summary {
+    margin-top: var(--space-6);
+    margin-bottom: var(--space-4);
+  }
+  
+  .active-orders-summary.hidden {
+    display: none;
+  }
+  
+  .active-orders-header {
+    font-size: var(--text-lg);
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: var(--space-4);
+    padding-bottom: var(--space-2);
+    border-bottom: 2px solid var(--border-default);
   }
   
   .orders-grid {
@@ -355,18 +392,18 @@
 
     <div class="filters">
       <button class="filter-tab active" data-status="Active">Active</button>
-      <button class="filter-tab" data-status="Revision">Revision</button>
-      <button class="filter-tab" data-status="Late">Late</button>
-      <button class="filter-tab" data-status="Delivered">Delivered</button>
       <button class="filter-tab" data-status="Completed">Completed</button>
       <button class="filter-tab" data-status="Cancelled">Cancelled</button>
-      <button class="filter-tab" data-status="In dispute">In Dispute</button>
-  </div>
+    </div>
+    
+    <div class="active-orders-summary" id="activeOrdersSummary" style="display: none;">
+      <h2 class="active-orders-header" id="activeOrdersHeader">Active orders</h2>
+    </div>
 
     <div class="orders-grid" id="ordersGrid">
       {% if orders %}
   {% for order in orders %}
-        <div class="order-card" data-status="{{ order.status }}">
+        <div class="order-card" data-status="{{ order.status }}" data-category="{% if order.status == 'Delivered' %}awaiting-response{% elif order.status in ['Active', 'Revision', 'Late', 'In dispute'] %}active{% else %}{{ order.status|lower }}{% endif %}">
     <div class="order-user">
             {% if order.user and order.user.avatar %}
               <img src="{{ url_for('uploads', path=order.user.avatar) }}" alt="{{ order.user.username }}" class="order-user-avatar">
@@ -432,29 +469,135 @@
         </div>
       {% endif %}
     </div>
+    
+    <div class="subcategory-section" id="awaitingResponseSection" style="display: none;">
+      <h2 class="subcategory-header" id="awaitingResponseHeader">Awaiting Response</h2>
+    </div>
   </main>
 </div>
 
 <script>
   document.addEventListener('DOMContentLoaded', () => {
     const filterTabs = document.querySelectorAll('.filter-tab');
-    const orderCards = document.querySelectorAll('.order-card');
+    const orderCards = Array.from(document.querySelectorAll('.order-card')); // Convert to array
+    const awaitingResponseSection = document.getElementById('awaitingResponseSection');
+    const ordersGrid = document.getElementById('ordersGrid');
+    const activeOrdersSummary = document.getElementById('activeOrdersSummary');
     
     function filterOrders(status) {
+      let hasAwaitingResponse = false;
+      let hasActiveOrders = false;
+      let activeOrdersCount_num = 0;
+      let activeOrdersTotal = 0;
+      
+      // First pass: hide all and count
       orderCards.forEach(card => {
         const cardStatus = card.getAttribute('data-status');
-        const shouldShow = 
-          (status === 'Active' && ['Active', 'Delivered'].includes(cardStatus)) ||
-          (status === 'Revision' && cardStatus === 'Revision') ||
-          (status === 'Late' && cardStatus === 'Late') ||
-          (status === 'Delivered' && cardStatus === 'Delivered') ||
-          (status === 'Completed' && cardStatus === 'Completed') ||
-          (status === 'Cancelled' && cardStatus === 'Cancelled') ||
-          (status === 'In dispute' && cardStatus === 'In dispute');
+        card.style.display = 'none';
         
-        card.style.display = shouldShow ? 'flex' : 'none';
-  });
-}
+        if (status === 'Active') {
+          if (cardStatus === 'Delivered') {
+            hasAwaitingResponse = true;
+          } else if (cardStatus === 'Active' || cardStatus === 'Revision' || cardStatus === 'Late' || cardStatus === 'In dispute') {
+            // Include Active, Revision, Late, and In dispute orders in count and total
+            hasActiveOrders = true;
+            activeOrdersCount_num++;
+            
+            // Extract price from order card
+            const priceElement = card.querySelector('.order-price');
+            if (priceElement) {
+              const priceText = priceElement.textContent.trim();
+              // Extract number from text like "$20.00" or "$20"
+              const priceMatch = priceText.match(/\$?(\d+\.?\d*)/);
+              if (priceMatch) {
+                activeOrdersTotal += parseFloat(priceMatch[1]);
+              }
+            }
+          }
+        }
+      });
+      
+      // Update active orders summary
+      if (status === 'Active' && hasActiveOrders) {
+        activeOrdersSummary.style.display = 'block';
+        const activeOrdersHeader = document.getElementById('activeOrdersHeader');
+        if (activeOrdersHeader) {
+          activeOrdersHeader.textContent = `Active orders - ${activeOrdersCount_num} ($${activeOrdersTotal.toFixed(2)})`;
+        }
+      } else {
+        activeOrdersSummary.style.display = 'none';
+      }
+      
+      // Second pass: show appropriate orders
+      orderCards.forEach(card => {
+        const cardStatus = card.getAttribute('data-status');
+        let shouldShow = false;
+        
+        if (status === 'Active') {
+          // Show Active, Revision, Late, In dispute orders in main grid (including In dispute in count)
+          if (cardStatus === 'Active' || cardStatus === 'Revision' || cardStatus === 'Late' || cardStatus === 'In dispute') {
+            shouldShow = true;
+            card.style.display = 'flex';
+          } else if (cardStatus === 'Delivered') {
+            // Delivered orders will be shown in awaiting response section
+            shouldShow = true;
+          }
+        } else if (status === 'Completed' && cardStatus === 'Completed') {
+          shouldShow = true;
+          card.style.display = 'flex';
+        } else if (status === 'Cancelled' && cardStatus === 'Cancelled') {
+          shouldShow = true;
+          card.style.display = 'flex';
+        }
+      });
+      
+      // Handle "Awaiting Response" section (at the end)
+      if (status === 'Active' && hasAwaitingResponse) {
+        awaitingResponseSection.style.display = 'block';
+        const awaitingHeader = document.getElementById('awaitingResponseHeader');
+        if (awaitingHeader) {
+          awaitingHeader.style.display = 'block';
+        }
+        
+        // Create or update awaiting response container
+        let awaitingContainer = awaitingResponseSection.querySelector('.awaiting-orders-container');
+        if (!awaitingContainer) {
+          awaitingContainer = document.createElement('div');
+          awaitingContainer.className = 'orders-grid awaiting-orders-container';
+          awaitingResponseSection.appendChild(awaitingContainer);
+        }
+        
+        // Move delivered orders to awaiting response section
+        orderCards.forEach(card => {
+          const cardStatus = card.getAttribute('data-status');
+          if (cardStatus === 'Delivered') {
+            // Check if card is already in awaiting container
+            if (!awaitingContainer.contains(card)) {
+              awaitingContainer.appendChild(card);
+            }
+            card.style.display = 'flex';
+          } else if (cardStatus === 'Active' || cardStatus === 'Revision' || cardStatus === 'Late' || cardStatus === 'In dispute') {
+            // Ensure active orders (including In dispute) are in main grid
+            if (!ordersGrid.contains(card)) {
+              ordersGrid.appendChild(card);
+            }
+          }
+        });
+      } else {
+        awaitingResponseSection.style.display = 'none';
+        const awaitingHeader = document.getElementById('awaitingResponseHeader');
+        if (awaitingHeader) {
+          awaitingHeader.style.display = 'none';
+        }
+        
+        // Move all cards back to main grid when not on Active tab
+        orderCards.forEach(card => {
+          if (!ordersGrid.contains(card)) {
+            ordersGrid.appendChild(card);
+          }
+        });
+      }
+    }
     
     filterTabs.forEach(tab => {
       tab.addEventListener('click', () => {
@@ -464,6 +607,7 @@
       });
     });
     
+    // Initialize with Active tab
     const activeTab = document.querySelector('.filter-tab.active');
     if (activeTab) {
       filterOrders(activeTab.getAttribute('data-status'));
