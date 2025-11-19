@@ -126,6 +126,98 @@
   }
   
   /* ============================================
+     AUDIO PLAYER
+     ============================================ */
+  .hero-audio-player {
+    margin-top: var(--space-8);
+    margin-bottom: var(--space-8);
+    display: flex;
+    justify-content: center;
+    width: 100%;
+  }
+  
+  .audio-player-container {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    background: rgba(30, 35, 45, 0.8);
+    border-radius: var(--radius-xl);
+    padding: var(--space-4) var(--space-6);
+    width: 100%;
+    max-width: 600px;
+    position: relative;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  }
+  
+  .audio-play-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-full);
+    background: transparent;
+    border: none;
+    color: #ffffff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all var(--transition-fast);
+  }
+  
+  .audio-play-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: scale(1.1);
+  }
+  
+  .audio-play-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+  
+  .audio-play-btn.playing svg {
+    display: none;
+  }
+  
+  .audio-play-btn.playing::after {
+    content: '';
+    width: 18px;
+    height: 18px;
+    border-left: 6px solid #ffffff;
+    border-right: 6px solid #ffffff;
+    box-sizing: border-box;
+  }
+  
+  .audio-waveform {
+    flex: 1;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 0 var(--space-4);
+  }
+  
+  .waveform-bar {
+    width: 3px;
+    background: #ffffff;
+    border-radius: 2px;
+    transition: height 0.1s ease;
+    min-height: 4px;
+  }
+  
+  .audio-time {
+    color: #ffffff;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    min-width: 50px;
+    text-align: right;
+    flex-shrink: 0;
+    background: rgba(0, 0, 0, 0.3);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-md);
+  }
+  
+  /* ============================================
      REVIEWS SECTION
      ============================================ */
   .reviews-section {
@@ -362,6 +454,22 @@
       Elevate your sound with expert tagging that makes your beats stand out.
     </p>
     
+    <!-- Audio Player -->
+    {% if audio_file %}
+    <div class="hero-audio-player">
+      <audio id="heroAudio" src="{{ url_for('static', path='audio/' + audio_file) }}" preload="metadata"></audio>
+      <div class="audio-player-container">
+        <button class="audio-play-btn" id="audioPlayBtn" aria-label="Play audio">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg>
+        </button>
+        <div class="audio-waveform" id="audioWaveform"></div>
+        <div class="audio-time" id="audioTime">00:00</div>
+      </div>
+    </div>
+    {% endif %}
+    
     <div class="hero-cta">
       {% if not request.session.get('is_admin') %}
         <a href="/order/new" class="btn btn-primary hero-btn">
@@ -395,15 +503,15 @@
     
     <div class="hero-stats">
       <div class="hero-stat">
-        <div class="hero-stat-value">500+</div>
+        <div class="hero-stat-value">{{ tags_delivered }}{% if tags_delivered >= 100 %}+{% endif %}</div>
         <div class="hero-stat-label">Tags Delivered</div>
       </div>
       <div class="hero-stat">
-        <div class="hero-stat-value">4.9★</div>
+        <div class="hero-stat-value">{{ avg_rating }}★</div>
         <div class="hero-stat-label">Average Rating</div>
       </div>
       <div class="hero-stat">
-        <div class="hero-stat-value">24h</div>
+        <div class="hero-stat-value">{{ turnaround }}</div>
         <div class="hero-stat-label">Fast Turnaround</div>
       </div>
     </div>
@@ -474,4 +582,87 @@
   </div>
   {% endif %}
 </section>
+
+{% if audio_file %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const audio = document.getElementById('heroAudio');
+  const playBtn = document.getElementById('audioPlayBtn');
+  const waveform = document.getElementById('audioWaveform');
+  const timeDisplay = document.getElementById('audioTime');
+  
+  if (!audio || !playBtn || !waveform || !timeDisplay) return;
+  
+  // Generate waveform bars
+  const barCount = 60;
+  for (let i = 0; i < barCount; i++) {
+    const bar = document.createElement('div');
+    bar.className = 'waveform-bar';
+    bar.style.height = Math.random() * 60 + 20 + '%';
+    waveform.appendChild(bar);
+  }
+  
+  const bars = waveform.querySelectorAll('.waveform-bar');
+  
+  // Format time
+  function formatTime(seconds) {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  }
+  
+  // Update time display
+  function updateTime() {
+    timeDisplay.textContent = formatTime(audio.currentTime);
+  }
+  
+  // Animate waveform
+  let animationFrame;
+  function animateWaveform() {
+    if (audio.paused) {
+      bars.forEach(bar => {
+        bar.style.height = Math.random() * 60 + 20 + '%';
+      });
+    } else {
+      // Use audio context for real waveform if available
+      bars.forEach((bar, i) => {
+        const height = Math.random() * 60 + 20;
+        bar.style.height = height + '%';
+      });
+    }
+    animationFrame = requestAnimationFrame(animateWaveform);
+  }
+  
+  // Play/Pause toggle
+  playBtn.addEventListener('click', function() {
+    if (audio.paused) {
+      audio.play();
+      playBtn.classList.add('playing');
+    } else {
+      audio.pause();
+      playBtn.classList.remove('playing');
+    }
+  });
+  
+  // Update time on timeupdate
+  audio.addEventListener('timeupdate', updateTime);
+  
+  // Update time on loadedmetadata
+  audio.addEventListener('loadedmetadata', function() {
+    updateTime();
+  });
+  
+  // Reset on ended
+  audio.addEventListener('ended', function() {
+    playBtn.classList.remove('playing');
+    audio.currentTime = 0;
+    updateTime();
+  });
+  
+  // Start animation
+  animateWaveform();
+});
+</script>
+{% endif %}
+
 {% endblock %}

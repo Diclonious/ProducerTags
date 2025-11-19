@@ -6,13 +6,16 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from app.db.database import SessionLocal, engine, Base
-from app.domain.User import User
-from app.domain.Order import Order
-from app.domain.Package import Package
-from app.domain.Tag import Tag
-from app.domain.Delivery import Delivery
-from app.domain.OrderEvent import OrderEvent
+from app.infrastructure.database import SessionLocal, engine, Base
+from app.domain.entities.User import User
+from app.domain.entities.Order import Order
+from app.domain.entities.Package import Package
+from app.domain.entities.Tag import Tag
+from app.domain.entities.Delivery import Delivery
+from app.domain.entities.DeliveryFile import DeliveryFile
+from app.domain.entities.OrderEvent import OrderEvent
+from app.domain.entities.Message import Message
+from app.domain.entities.Notification import Notification
 from sqlalchemy import text
 
 def reset_database():
@@ -43,15 +46,27 @@ def reset_database():
         inspector = inspect(engine)
         tables = inspector.get_table_names()
         
-        # Drop tables in reverse dependency order
-        tables_to_drop = ['order_events', 'deliveries', 'tags', 'orders', 'packages', 'users']
-        for table_name in tables_to_drop:
-            if table_name in tables:
+        # Drop all tables except users (handle foreign key constraints)
+        # Get actual table names from database
+        for table_name in tables:
+            if table_name.lower() != 'users':  # Keep users table
                 try:
+                    # Disable foreign key checks temporarily
+                    db.execute(text("SET FOREIGN_KEY_CHECKS = 0"))
                     db.execute(text(f"DROP TABLE IF EXISTS `{table_name}`"))
+                    db.execute(text("SET FOREIGN_KEY_CHECKS = 1"))
                     print(f"  [OK] Dropped table: {table_name}")
                 except Exception as e:
                     print(f"  [WARN] Could not drop {table_name}: {e}")
+        
+        # Also try to drop users table and recreate it (to clear any foreign key issues)
+        try:
+            db.execute(text("SET FOREIGN_KEY_CHECKS = 0"))
+            db.execute(text("DROP TABLE IF EXISTS `users`"))
+            db.execute(text("SET FOREIGN_KEY_CHECKS = 1"))
+            print("  [OK] Dropped users table (will be recreated)")
+        except Exception as e:
+            print(f"  [WARN] Could not drop users table: {e}")
         
         db.commit()
         print("[OK] All tables dropped")

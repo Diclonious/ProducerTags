@@ -5,8 +5,9 @@ Run this script to update your database schema.
 """
 
 import mysql.connector
-from app.core.config import DATABASE_URL
 import os
+
+DATABASE_URL = os.getenv("DATABASE_URL", "mysql+mysqlconnector://root:Anabela123!@localhost:3306/producer_tags")
 
 def run_migration():
     """Add new columns to the orders table for the dispute system."""

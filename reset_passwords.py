@@ -6,12 +6,12 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from app.db.database import SessionLocal
-from app.domain.User import User
-from app.domain.Order import Order
-from app.domain.Package import Package
-from app.domain.Tag import Tag
-from app.domain.OrderEvent import OrderEvent
+from app.infrastructure.database import SessionLocal
+from app.domain.entities.User import User
+from app.domain.entities.Order import Order
+from app.domain.entities.Package import Package
+from app.domain.entities.Tag import Tag
+from app.domain.entities.OrderEvent import OrderEvent
 
 db = SessionLocal()
 

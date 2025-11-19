@@ -157,9 +157,31 @@
   </div>
   
   <div class="resolution-card">
-    <h2 class="section-title">How can we help you?</h2>
+    <h2 class="section-title">Help and Support</h2>
     
-    <form action="/order/{{ order.id }}/resolution/submit" method="post" id="resolutionForm">
+    {% if order.status == 'In dispute' %}
+    <div style="background: var(--warning-bg); border: 1px solid var(--warning); border-radius: var(--radius-xl); padding: var(--space-6); margin-bottom: var(--space-6);">
+      <div style="display: flex; align-items: center; gap: var(--space-4); margin-bottom: var(--space-4);">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+        <h3 style="font-size: var(--text-lg); font-weight: 700; color: var(--warning); margin: 0;">Active Dispute</h3>
+      </div>
+      <p style="color: var(--text-secondary); margin: 0; line-height: var(--leading-relaxed);">
+        This order currently has an active dispute. You cannot submit new requests until the existing dispute is resolved. 
+        Please go back to the order page to view and resolve the current dispute.
+      </p>
+      <div style="margin-top: var(--space-4);">
+        <a href="/order/{{ order.id }}" class="btn btn-primary" style="text-decoration: none; display: inline-block;">
+          Go to Order Page
+        </a>
+      </div>
+    </div>
+    {% endif %}
+    
+    <form action="/order/{{ order.id }}/resolution/submit" method="post" id="resolutionForm" {% if order.status == 'In dispute' %}style="display: none;"{% endif %}>
       <div class="form-group">
         <label for="request_type" class="form-label">Select Request Type</label>
         <select name="request_type" id="request_type" class="form-select" required onchange="toggleFields()">
