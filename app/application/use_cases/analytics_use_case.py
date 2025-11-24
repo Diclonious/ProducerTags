@@ -51,12 +51,17 @@ class AnalyticsUseCase:
         revenue = self.order_repository.get_revenue(user_id, "Completed", month_start)
         cancelled_revenue = self.order_repository.get_revenue(user_id, "Cancelled", month_start)
         
-        # Calculate expected earnings from active orders
+        # Calculate expected earnings from all active orders
+        # Include: Delivered, In dispute, Late, Revision, and Active
         active_orders = self.order_repository.get_by_status("Active")
         revision_orders = self.order_repository.get_by_status("Revision")
+        delivered_orders = self.order_repository.get_by_status("Delivered")
+        dispute_orders = self.order_repository.get_by_status("In dispute")
+        late_orders = self.order_repository.get_by_status("Late")
         
         expected_earnings = 0.0
-        for order in active_orders + revision_orders:
+        all_active_orders = active_orders + revision_orders + delivered_orders + dispute_orders + late_orders
+        for order in all_active_orders:
             if order.package and order.package.price:
                 expected_earnings += float(order.package.price)
         
