@@ -6,19 +6,19 @@
   <meta name="description" content="Professional audio tagging services for producers and creators">
     <title>{% block title %}TaggedByBelle{% endblock %}</title>
   
-  <!-- Favicon -->
+  
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', path='images/favicon.svg') }}">
   <link rel="alternate icon" href="{{ url_for('static', path='images/favicon.svg') }}">
   
-  <!-- Fonts -->
+  
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   
-  <!-- Main Styles -->
+  
   <link rel="stylesheet" href="{{ url_for('static', path='css/main.css') }}">
   
-  <!-- Page-specific styles -->
+  
   {% block extra_css %}{% endblock %}
   
     <style>
@@ -783,19 +783,19 @@
     </style>
   </head>
   <body>
-  <!-- Navigation -->
+  
     <header class="navbar">
     <div class="navbar-inner">
-      <!-- Brand -->
+      
       <a href="/" class="brand">
         <div class="brand-logo">TB</div>
         <span>TaggedByBelle</span>
       </a>
       
-      <!-- Navigation Links -->
+      
       <nav class="nav-links">
           {% if request.session.get('user_id') %}
-          <!-- Logged in navigation -->
+          
           <a href="{{ '/myorders-admin' if request.session.get('is_admin') else '/myorders' }}" class="nav-link">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <rect x="3" y="3" width="7" height="7"></rect>
@@ -817,7 +817,7 @@
           </a>
           {% endif %}
           
-          <!-- Messages Inbox Dropdown -->
+          
           <div data-dropdown id="messagesDropdown" style="position: relative;">
             <button data-dropdown-trigger class="inbox-icon" id="inboxIcon">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -846,7 +846,7 @@
             </div>
           </div>
           
-          <!-- Notifications Dropdown -->
+          
           <div data-dropdown id="notificationsDropdown" style="position: relative;">
             <button data-dropdown-trigger class="notification-bell" id="notificationBell">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -875,7 +875,7 @@
             </div>
           </div>
           
-          <!-- User Dropdown -->
+          
           <div data-dropdown>
             <button data-dropdown-trigger class="avatar-button">
               {% if request.session.get('avatar_url') %}
@@ -939,7 +939,7 @@
               </div>
             </div>
           {% else %}
-          <!-- Guest navigation -->
+          
           <a href="/login" class="btn btn-ghost btn-sm">Log In</a>
           <a href="/signup" class="btn btn-primary btn-sm">Sign Up</a>
           {% endif %}
@@ -947,12 +947,12 @@
       </div>
     </header>
   
-  <!-- Main Content -->
+  
   <main>
       {% block content %}{% endblock %}
     </main>
   
-  <!-- Footer -->
+  
   <footer class="footer">
     <div class="footer-content">
       <div class="footer-text">
@@ -966,10 +966,10 @@
     </div>
   </footer>
   
-  <!-- Main JavaScript -->
+  
   <script src="{{ url_for('static', path='js/main.js') }}"></script>
   
-  <!-- Notifications System -->
+  
   {% if request.session.get('user_id') %}
     <script>
     // ============================================
@@ -1276,7 +1276,7 @@
     </script>
   {% endif %}
   
-  <!-- Page-specific scripts -->
+  
   {% block extra_js %}{% endblock %}
 </body>
 </html>

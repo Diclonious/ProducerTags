@@ -41,7 +41,7 @@ async def edit_package_form(
     package = container.package_use_case.get_package_by_id(package_id)
     if not package:
         raise HTTPException(status_code=404, detail="Package not found")
-    
+
     return templates.TemplateResponse(
         "edit_package.html",
         {"request": request, "package": package}
@@ -68,7 +68,7 @@ async def edit_package_submit(
         tag_count=tag_count,
         description=description
     )
-    
+
     try:
         container.package_use_case.update_package(package_id, package_data)
         return RedirectResponse("/packages", status_code=HTTP_302_FOUND)

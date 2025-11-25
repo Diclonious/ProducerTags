@@ -40,11 +40,11 @@ async def root(request: Request, db: Session = Depends(get_db)):
     """Homepage with public reviews"""
     from sqlalchemy.orm import joinedload
     from app.domain.entities.Order import Order
-    
+
     container = get_service_container(db)
     try:
-        # Get orders with reviews - using repository but need relationships
-        # For now, use direct query for reviews with relationships
+
+
         public_reviews = (
             db.query(Order)
             .options(joinedload(Order.package), joinedload(Order.user))
@@ -53,39 +53,39 @@ async def root(request: Request, db: Session = Depends(get_db)):
             .limit(12)
             .all()
         )
-        
-        # Calculate actual statistics
+
+
         all_orders = container.order_repository.get_all()
-        
-        # Total tags delivered (completed orders)
+
+
         completed_orders = [o for o in all_orders if o.status == "Completed"]
         tags_delivered = len(completed_orders)
-        
-        # Average rating
+
+
         reviews = [o.review for o in all_orders if o.review is not None]
         if reviews:
             avg_rating = sum(reviews) / len(reviews)
             avg_rating_formatted = f"{avg_rating:.1f}"
         else:
             avg_rating_formatted = "0.0"
-        
-        # Fast turnaround (24h is the standard, but we can show it as is)
+
+
         turnaround = "24h"
-        
-        # Find an audio file in static/audio directory
+
+
         import os
         from pathlib import Path
-        # Get the app directory (4 levels up from this file)
+
         BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
         static_audio_dir = BASE_DIR / "static" / "audio"
         audio_file = None
         if static_audio_dir.exists():
-            # Look for both .wav and .mp3 files
+
             audio_files = list(static_audio_dir.glob("*.wav")) + list(static_audio_dir.glob("*.mp3"))
             if audio_files:
-                # Use the first audio file found (sorted by name for consistency)
+
                 audio_file = sorted(audio_files, key=lambda x: x.name)[0].name
-        
+
     finally:
         pass
 
@@ -123,11 +123,11 @@ async def users_login(
     """Handle user login"""
     container = get_service_container(db)
     login_data = UserLogin(username=username, password=password)
-    
+
     user = container.auth_use_case.authenticate_user(login_data)
     if not user:
         return templates.TemplateResponse(
-            "login.html", 
+            "login.html",
             {"request": request, "error": "Invalid username or password"}
         )
 
@@ -152,23 +152,23 @@ async def signup(
 ):
     """Handle user signup"""
     container = get_service_container(db)
-    
+
     try:
         TypeAdapter(EmailStr).validate_python(email)
     except ValidationError:
         return templates.TemplateResponse(
-            "signup.html", 
+            "signup.html",
             {"request": request, "error": "Invalid email format"}
         )
 
     user_data = UserCreate(username=username, email=email, password=password, is_admin=False)
-    
+
     try:
         user = container.auth_use_case.create_user(user_data)
         return RedirectResponse(url="/login", status_code=HTTP_302_FOUND)
     except ValueError as e:
         return templates.TemplateResponse(
-            "signup.html", 
+            "signup.html",
             {"request": request, "error": str(e)}
         )
 
@@ -206,8 +206,8 @@ async def update_profile(
 ):
     """Update user profile"""
     container = get_service_container(db)
-    
-    # Validate email
+
+
     try:
         TypeAdapter(EmailStr).validate_python(email)
     except ValidationError:
@@ -216,7 +216,7 @@ async def update_profile(
             {"request": request, "user": current_user, "error": "Invalid email format"}
         )
 
-    # Check duplicates
+
     existing_user = container.user_repository.get_by_username(username)
     if existing_user and existing_user.id != current_user.id:
         return templates.TemplateResponse(
@@ -231,14 +231,14 @@ async def update_profile(
             {"request": request, "user": current_user, "error": "Email already in use"}
         )
 
-    # Update fields
+
     current_user.username = username
     current_user.email = email
 
     if new_password.strip():
         current_user.set_password(new_password.strip())
 
-    # Handle avatar upload
+
     if avatar and getattr(avatar, "filename", ""):
         filename = container.file_storage.save_uploaded_file(avatar, "avatar", current_user.id)
         file_path = container.file_storage.get_file_path(filename)
@@ -249,7 +249,7 @@ async def update_profile(
 
     container.user_repository.update(current_user)
 
-    # Refresh session data
+
     request.session["username"] = current_user.username
 
     avatar_url = None

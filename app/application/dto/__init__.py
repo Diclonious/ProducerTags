@@ -1,2 +1,2 @@
-# Application DTOs (Pydantic Schemas)
+
 

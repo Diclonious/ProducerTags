@@ -16,7 +16,7 @@ def _get_time_ago(dt):
     from app.infrastructure.utils.time_utils import get_current_time
     now = get_current_time()
     diff = now - dt
-    
+
     if diff.days > 7:
         return dt.strftime("%b %d")
     elif diff.days > 0:
@@ -39,7 +39,7 @@ async def get_notifications(
 ):
     """Get all notifications for current user (AJAX endpoint)"""
     notifications = container.notification_use_case.get_notifications(current_user.id)
-    
+
     notifications_data = []
     for notif in notifications:
         notifications_data.append({
@@ -52,7 +52,7 @@ async def get_notifications(
             "created_at": notif.created_at.strftime("%b %d, %I:%M %p") if notif.created_at else "",
             "time_ago": _get_time_ago(notif.created_at) if notif.created_at else "Just now"
         })
-    
+
     return JSONResponse(content={"notifications": notifications_data})
 
 

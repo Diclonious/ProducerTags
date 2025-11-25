@@ -36,12 +36,12 @@ async def send_message(
                 message_text = body.get("message_text", "")
             except:
                 message_text = ""
-    
+
     if not message_text or not message_text.strip():
         raise HTTPException(status_code=400, detail="Message text is required")
-    
+
     message_data = MessageCreate(message_text=message_text.strip())
-    
+
     try:
         message = container.message_use_case.send_message(
             order_id,
@@ -49,11 +49,11 @@ async def send_message(
             message_data,
             current_user.is_admin
         )
-        
-        # Check if AJAX request
+
+
         accept_header = request.headers.get("accept", "")
         content_type = request.headers.get("content-type", "")
-        
+
         if "application/json" in accept_header or "application/json" in content_type:
             sender = container.user_repository.get_by_id(current_user.id)
             return JSONResponse(content={
@@ -89,7 +89,7 @@ async def get_messages(
             current_user.id,
             current_user.is_admin
         )
-        
+
         messages_data = []
         for msg in messages:
             sender = container.user_repository.get_by_id(msg.sender_id)
@@ -102,7 +102,7 @@ async def get_messages(
                 "created_at": msg.created_at.strftime("%b %d, %I:%M %p") if msg.created_at else "",
                 "is_admin": sender.is_admin if sender else False
             })
-        
+
         return JSONResponse(content={"messages": messages_data})
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -132,19 +132,19 @@ async def get_message_notifications(
     from app.domain.entities.Message import Message
     from app.domain.entities.Order import Order
     from sqlalchemy.orm import joinedload
-    
-    # Get recent messages where user is recipient
+
+
     query = container.db.query(Message).join(Order).options(
         joinedload(Message.sender),
         joinedload(Message.order)
     ).filter(Message.sender_id != current_user.id)
-    
+
     if not current_user.is_admin:
         query = query.filter(Order.user_id == current_user.id)
-    
+
     all_messages = query.order_by(Message.created_at.desc()).limit(50).all()
-    
-    # Group by (sender_id, order_id)
+
+
     message_groups = {}
     for msg in all_messages:
         key = (msg.sender_id, msg.order_id)
@@ -154,24 +154,24 @@ async def get_message_notifications(
                 "unread_count": 0,
                 "latest_message": None
             }
-        
+
         message_groups[key]["messages"].append(msg)
         if not msg.is_read:
             message_groups[key]["unread_count"] += 1
-        
+
         if (message_groups[key]["latest_message"] is None or
             (msg.created_at and message_groups[key]["latest_message"].created_at and
              msg.created_at > message_groups[key]["latest_message"].created_at)):
             message_groups[key]["latest_message"] = msg
-    
-    # Convert to list
+
+
     grouped_messages = []
     for key, group_data in message_groups.items():
         latest_msg = group_data["latest_message"]
         if latest_msg:
             msg_timestamp = latest_msg.created_at.timestamp() if latest_msg.created_at else 0
             sender = container.user_repository.get_by_id(latest_msg.sender_id)
-            
+
             grouped_messages.append({
                 "sender_id": latest_msg.sender_id,
                 "order_id": latest_msg.order_id,
@@ -185,16 +185,16 @@ async def get_message_notifications(
                 "latest_message_id": latest_msg.id,
                 "_sort_timestamp": msg_timestamp
             })
-    
-    # Sort: unread first, then by date
+
+
     grouped_messages_sorted = sorted(
         grouped_messages,
         key=lambda x: (not x["has_unread"], -x["_sort_timestamp"])
     )
-    
+
     for msg in grouped_messages_sorted:
         del msg["_sort_timestamp"]
-    
+
     return JSONResponse(content={"messages": grouped_messages_sorted})
 
 
@@ -218,7 +218,7 @@ def _get_time_ago(dt):
     from app.infrastructure.utils.time_utils import get_current_time
     now = get_current_time()
     diff = now - dt
-    
+
     if diff.days > 7:
         return dt.strftime("%b %d")
     elif diff.days > 0:

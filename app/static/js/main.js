@@ -1,11 +1,3 @@
-/**
- * TaggedByBelle - Main JavaScript
- * Handles interactions, animations, and dynamic UI elements
- */
-
-// ============================================
-// INITIALIZATION
-// ============================================
 document.addEventListener('DOMContentLoaded', () => {
   initDropdowns();
   initModals();
@@ -15,33 +7,33 @@ document.addEventListener('DOMContentLoaded', () => {
   initFormValidation();
 });
 
-// ============================================
-// DROPDOWN MENUS
-// ============================================
+
+
+
 function initDropdowns() {
   const dropdowns = document.querySelectorAll('[data-dropdown]');
-  
+
   dropdowns.forEach(dropdown => {
     const trigger = dropdown.querySelector('[data-dropdown-trigger]');
     const menu = dropdown.querySelector('[data-dropdown-menu]');
-    
+
     if (!trigger || !menu) return;
-    
+
     trigger.addEventListener('click', (e) => {
       e.stopPropagation();
       const isOpen = dropdown.classList.contains('open');
-      
-      // Close all other dropdowns
+
+
       document.querySelectorAll('[data-dropdown].open').forEach(d => {
         if (d !== dropdown) d.classList.remove('open');
       });
-      
-      // Toggle current dropdown
+
+
       dropdown.classList.toggle('open', !isOpen);
     });
   });
-  
-  // Close dropdowns when clicking outside
+
+
   document.addEventListener('click', (e) => {
     if (!e.target.closest('[data-dropdown]')) {
       document.querySelectorAll('[data-dropdown].open').forEach(d => {
@@ -51,11 +43,11 @@ function initDropdowns() {
   });
 }
 
-// ============================================
-// MODAL SYSTEM
-// ============================================
+
+
+
 function initModals() {
-  // Open modal
+
   document.querySelectorAll('[data-modal-open]').forEach(trigger => {
     trigger.addEventListener('click', (e) => {
       e.preventDefault();
@@ -63,8 +55,8 @@ function initModals() {
       openModal(modalId);
     });
   });
-  
-  // Close modal
+
+
   document.querySelectorAll('[data-modal-close]').forEach(trigger => {
     trigger.addEventListener('click', (e) => {
       e.preventDefault();
@@ -72,8 +64,8 @@ function initModals() {
       if (modal) closeModal(modal.id);
     });
   });
-  
-  // Close on backdrop click
+
+
   document.querySelectorAll('[data-modal]').forEach(modal => {
     modal.addEventListener('click', (e) => {
       if (e.target === modal) {
@@ -81,8 +73,8 @@ function initModals() {
       }
     });
   });
-  
-  // Close on Escape key
+
+
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       const openModal = document.querySelector('[data-modal].is-open');
@@ -94,11 +86,11 @@ function initModals() {
 function openModal(modalId) {
   const modal = document.getElementById(modalId);
   if (!modal) return;
-  
+
   modal.classList.add('is-open');
   document.body.style.overflow = 'hidden';
-  
-  // Focus first input
+
+
   const firstInput = modal.querySelector('input, textarea, select');
   if (firstInput) setTimeout(() => firstInput.focus(), 100);
 }
@@ -106,22 +98,21 @@ function openModal(modalId) {
 function closeModal(modalId) {
   const modal = document.getElementById(modalId);
   if (!modal) return;
-  
+
   modal.classList.remove('is-open');
   document.body.style.overflow = '';
-  
-  // Reset form if exists
+
+
   const form = modal.querySelector('form');
   if (form) form.reset();
 }
 
-// ============================================
-// TOAST NOTIFICATIONS
-// ============================================
+
+
+
 let toastContainer = null;
 
 function initToasts() {
-  // Create toast container if it doesn't exist
   if (!document.getElementById('toast-container')) {
     toastContainer = document.createElement('div');
     toastContainer.id = 'toast-container';
@@ -143,7 +134,7 @@ function initToasts() {
 
 function showToast(message, type = 'info', duration = 3000) {
   if (!toastContainer) initToasts();
-  
+
   const toast = document.createElement('div');
   toast.className = `toast toast-${type}`;
   toast.style.cssText = `
@@ -160,24 +151,24 @@ function showToast(message, type = 'info', duration = 3000) {
     align-items: center;
     gap: 12px;
   `;
-  
+
   const icon = getToastIcon(type);
   const text = document.createElement('span');
   text.textContent = message;
   text.style.cssText = 'flex: 1; color: var(--text-primary); font-size: 14px;';
-  
+
   toast.appendChild(icon);
   toast.appendChild(text);
-  
+
   toastContainer.appendChild(toast);
-  
-  // Auto-dismiss
+
+
   setTimeout(() => {
     toast.style.animation = 'slideOut 0.3s ease-out';
     setTimeout(() => toast.remove(), 300);
   }, duration);
-  
-  // Click to dismiss
+
+
   toast.addEventListener('click', () => {
     toast.style.animation = 'slideOut 0.3s ease-out';
     setTimeout(() => toast.remove(), 300);
@@ -187,7 +178,7 @@ function showToast(message, type = 'info', duration = 3000) {
 function getToastIcon(type) {
   const icon = document.createElement('span');
   icon.style.cssText = 'font-size: 20px; flex-shrink: 0;';
-  
+
   switch(type) {
     case 'success':
       icon.textContent = '✓';
@@ -205,11 +196,11 @@ function getToastIcon(type) {
       icon.textContent = 'ℹ';
       icon.style.color = 'var(--info)';
   }
-  
+
   return icon;
 }
 
-// Add CSS animations
+
 if (!document.getElementById('toast-animations')) {
   const style = document.createElement('style');
   style.id = 'toast-animations';
@@ -238,9 +229,9 @@ if (!document.getElementById('toast-animations')) {
   document.head.appendChild(style);
 }
 
-// ============================================
-// COUNTDOWN TIMERS
-// ============================================
+
+
+
 function initCountdowns() {
   updateCountdowns();
   setInterval(updateCountdowns, 1000);
@@ -248,23 +239,23 @@ function initCountdowns() {
 
 function updateCountdowns() {
   const countdowns = document.querySelectorAll('[data-countdown]');
-  
+
   countdowns.forEach(element => {
     const dueDate = new Date(element.getAttribute('data-countdown'));
     const now = new Date();
     const diff = dueDate - now;
-    
+
     if (diff < 0) {
       element.textContent = 'Overdue';
       element.style.color = 'var(--error)';
       return;
     }
-    
+
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
     const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-    
+
     if (days > 0) {
       element.textContent = `${days}d ${hours}h ${minutes}m`;
     } else if (hours > 0) {
@@ -278,9 +269,9 @@ function updateCountdowns() {
   });
 }
 
-// ============================================
-// SCROLL ANIMATIONS
-// ============================================
+
+
+
 function initAnimations() {
   const observer = new IntersectionObserver(
     (entries) => {
@@ -293,37 +284,37 @@ function initAnimations() {
     },
     { threshold: 0.1 }
   );
-  
+
   document.querySelectorAll('[data-animate]').forEach(el => {
     observer.observe(el);
   });
 }
 
-// ============================================
-// FORM VALIDATION
-// ============================================
+
+
+
 function initFormValidation() {
   const forms = document.querySelectorAll('[data-validate]');
-  
+
   forms.forEach(form => {
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      
-      // Clear previous errors
+
+
       form.querySelectorAll('.form-error').forEach(error => error.remove());
       form.querySelectorAll('.is-invalid').forEach(input => input.classList.remove('is-invalid'));
-      
-      // Validate
+
+
       const isValid = validateForm(form);
-      
+
       if (isValid) {
-        // Show loading state
+
         const submitBtn = form.querySelector('[type="submit"]');
         const originalText = submitBtn.textContent;
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<span class="spinner"></span> Loading...';
-        
-        // Submit form
+
+
         try {
           form.submit();
         } catch (error) {
@@ -339,7 +330,7 @@ function initFormValidation() {
 function validateForm(form) {
   let isValid = true;
   const inputs = form.querySelectorAll('input[required], textarea[required], select[required]');
-  
+
   inputs.forEach(input => {
     if (!input.value.trim()) {
       showFieldError(input, 'This field is required');
@@ -349,14 +340,14 @@ function validateForm(form) {
       isValid = false;
     }
   });
-  
+
   return isValid;
 }
 
 function showFieldError(input, message) {
   input.classList.add('is-invalid');
   input.style.borderColor = 'var(--error)';
-  
+
   const error = document.createElement('div');
   error.className = 'form-error';
   error.textContent = message;
@@ -367,20 +358,20 @@ function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-// ============================================
-// TAB SYSTEM
-// ============================================
+
+
+
 function initTabs() {
   document.querySelectorAll('[data-tab]').forEach(tab => {
     tab.addEventListener('click', () => {
       const targetId = tab.getAttribute('data-tab');
       const tabGroup = tab.closest('[data-tabs]');
-      
-      // Update active tab
+
+
       tabGroup.querySelectorAll('[data-tab]').forEach(t => t.classList.remove('active'));
       tab.classList.add('active');
-      
-      // Update active panel
+
+
       document.querySelectorAll('[data-tab-panel]').forEach(panel => {
         panel.classList.toggle('active', panel.id === targetId);
       });
@@ -388,11 +379,11 @@ function initTabs() {
   });
 }
 
-// ============================================
-// UTILITY FUNCTIONS
-// ============================================
 
-// Copy to clipboard
+
+
+
+
 function copyToClipboard(text) {
   navigator.clipboard.writeText(text).then(() => {
     showToast('Copied to clipboard!', 'success', 2000);
@@ -401,7 +392,7 @@ function copyToClipboard(text) {
   });
 }
 
-// Format currency
+
 function formatCurrency(amount) {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -409,7 +400,7 @@ function formatCurrency(amount) {
   }).format(amount);
 }
 
-// Format date
+
 function formatDate(date) {
   return new Intl.DateTimeFormat('en-US', {
     month: 'short',
@@ -418,7 +409,7 @@ function formatDate(date) {
   }).format(new Date(date));
 }
 
-// Export for global use
+
 window.showToast = showToast;
 window.openModal = openModal;
 window.closeModal = closeModal;

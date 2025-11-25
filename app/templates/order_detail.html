@@ -8,14 +8,14 @@
 {% block content %}
 <div class="order-detail-wrapper">
   <div class="order-detail-layout">
-    <!-- Main Content -->
+    
     <div class="order-main-content">
-      <!-- Page Header -->
+      
       <div class="order-header">
         <h1 class="order-title">Order #{{ order.id }}</h1>
       </div>
       
-      <!-- Order Started Event Card -->
+      
       <div class="order-started-card">
         <div class="order-started-accent"></div>
         <div class="order-started-content">
@@ -30,7 +30,7 @@
         </div>
       </div>
       
-      <!-- Requirements Card -->
+      
       <div class="requirements-card">
         <h2 class="requirements-title">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -57,7 +57,7 @@
         {% endif %}
       </div>
       
-      <!-- Timeline -->
+      
       {% if timeline_items %}
       <div class="timeline">
     {% for item_data in timeline_items %}
@@ -231,7 +231,7 @@
   </div>
   {% endif %}
   
-  <!-- Admin Actions -->
+  
   {% if request.session.get('is_admin') and order.status in ['Active', 'Late', 'Revision'] %}
   <div class="order-actions">
     <div class="action-card">
@@ -249,7 +249,7 @@
   </div>
   {% endif %}
   
-  <!-- Admin Actions: Approve/Reject User Requests -->
+  
   {% if request.session.get('is_admin') and order.status == 'In dispute' and order.requested_by_admin != 'true' %}
   <div class="order-actions">
     <div class="action-card">
@@ -299,7 +299,7 @@
   </div>
   {% endif %}
   
-  <!-- User Actions: Approve/Reject Admin Requests -->
+  
   {% if not request.session.get('is_admin') and order.status == 'In dispute' and order.requested_by_admin == 'true' %}
   <div class="order-actions">
     <div class="action-card">
@@ -345,7 +345,7 @@
   </div>
   {% endif %}
   
-  <!-- User Actions: Mark as Complete -->
+  
   {% if not request.session.get('is_admin') and order.status == 'Delivered' %}
   <div class="order-actions">
     <div class="action-card">
@@ -365,10 +365,10 @@
   {% endif %}
   
   
-  <!-- Customer Review Section (if order is completed) -->
+  
   {% if order.status == 'Completed' %}
     {% if order.review %}
-      <!-- Review Exists - Display It -->
+      
       <div class="review-card-wrapper">
         <div class="review-card-completed">
           <div class="review-header-completed">
@@ -416,7 +416,7 @@
         </div>
       </div>
     {% else %}
-      <!-- No Review Yet - Show CTA -->
+      
       {% if not request.session.get('is_admin') %}
       <div class="review-cta-card">
         <div class="review-cta-content">
@@ -438,13 +438,13 @@
   {% endif %}
     </div>
     
-    <!-- Sidebar -->
+    
     <div class="order-sidebar">
-      <!-- Order Details -->
+      
       <div class="sidebar-section">
         <h2 class="sidebar-title">Order details</h2>
         
-        <!-- Service Description -->
+        
         <div class="service-preview">
           <div class="service-thumbnail">
             {% if order.package and order.package.name %}
@@ -464,7 +464,7 @@
         </div>
       </div>
       
-      <!-- Time Left to Deliver -->
+      
       {% if order.status != 'Completed' and order.status != 'Cancelled' and order.status != 'Delivered' and order.due_date %}
       <div class="sidebar-section">
         <h3 class="sidebar-subtitle">Time left to deliver</h3>
@@ -498,7 +498,7 @@
       </div>
       {% endif %}
       
-      <!-- Deliver Again Card (for Delivered orders) -->
+      
       {% if order.status == 'Delivered' and request.session.get('is_admin') %}
       <div class="sidebar-section">
         <h3 class="sidebar-subtitle">Want to deliver again?</h3>
@@ -514,20 +514,20 @@
       </div>
       {% endif %}
       
-      <!-- Seller/Buyer Information -->
+      
       <div class="sidebar-section">
         <h3 class="sidebar-subtitle">{% if request.session.get('is_admin') %}Buyer{% else %}Seller{% endif %} Information</h3>
         <div class="user-info">
           <div class="user-avatar-wrapper">
             {% if request.session.get('is_admin') %}
-              <!-- Admin viewing: Show buyer (order user) -->
+              
               {% if order.user and order.user.avatar %}
                 <img src="{{ url_for('uploads', path=order.user.avatar) }}" alt="{{ order.user.username }}" class="user-avatar">
               {% else %}
                 <div class="user-avatar-placeholder">{{ order.user.username[0]|upper if order.user else 'U' }}</div>
               {% endif %}
             {% else %}
-              <!-- User viewing: Show seller (admin) -->
+              
               {% if admin_user %}
                 {% if admin_user.avatar %}
                   <img src="{{ url_for('uploads', path=admin_user.avatar) }}" alt="{{ admin_user.username }}" class="user-avatar">
@@ -542,11 +542,11 @@
           </div>
           <div class="user-details">
             {% if request.session.get('is_admin') %}
-              <!-- Admin viewing: Show buyer info -->
+              
               <div class="user-name">{{ order.user.username if order.user else 'User' }}</div>
               <div class="user-handle">@{{ order.user.username if order.user else 'user' }}</div>
             {% else %}
-              <!-- User viewing: Show seller (admin) info -->
+              
               {% if admin_user %}
                 <div class="user-name">{{ admin_user.username }}</div>
                 <div class="user-handle">@{{ admin_user.username.lower() }}</div>
@@ -567,7 +567,7 @@
         </button>
       </div>
       
-      <!-- Order Summary -->
+      
       <div class="sidebar-section">
         <h3 class="sidebar-subtitle">Order Summary</h3>
         <div class="order-summary-list">
@@ -590,7 +590,7 @@
         </div>
       </div>
       
-      <!-- Track Order -->
+      
       <div class="sidebar-section">
         <h3 class="sidebar-subtitle">
           Track Order
@@ -636,7 +636,7 @@
         </div>
       </div>
       
-      <!-- Help & Support -->
+      
       {% if order.status not in ['Cancelled', 'Completed'] %}
       <div class="sidebar-section">
         <h3 class="sidebar-subtitle">Help & Support</h3>
@@ -674,7 +674,7 @@
     </div>
   </div>
   
-  <!-- Chat Sidebar (Hidden by default) -->
+  
   <div class="chat-sidebar" id="chatSidebar">
     <div class="chat-sidebar-header">
       <h3 class="chat-sidebar-title">Messages</h3>
@@ -736,7 +736,7 @@
     </form>
   </div>
   
-  <!-- Overlay for mobile -->
+  
   <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleChatSidebar()"></div>
 </div>
 
@@ -1256,7 +1256,7 @@
 }
 </style>
 
-<!-- Deliver Modal -->
+
 <div id="deliverModal" class="delivery-modal">
   <div class="modal-backdrop" onclick="closeDeliverModal()"></div>
   <div class="modal-panel">
@@ -1353,7 +1353,7 @@
   </div>
 </div>
 
-<!-- Audio Preview Modal -->
+
 <div id="audioPreviewModal" class="audio-preview-modal">
   <div class="modal-backdrop" onclick="closeAudioPreview()"></div>
   <div class="audio-modal-panel">

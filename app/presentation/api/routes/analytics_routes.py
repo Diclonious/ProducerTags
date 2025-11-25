@@ -21,22 +21,22 @@ async def analytics(
     container = Depends(get_service_container)
 ):
     """Show analytics dashboard"""
-    # Get statistics
+
     stats = container.analytics_use_case.get_order_statistics()
     revenue_stats = container.analytics_use_case.get_revenue_statistics()
-    
-    # Combine stats and revenue_stats into kpis for template
+
+
     kpis = {
         **stats,
         "revenue": revenue_stats["revenue"],
         "expected_earnings": revenue_stats["expected_earnings"]
     }
-    
-    # Get chart data
+
+
     labels, revenue_series, completed_series, cancelled_series, cancelled_revenue_series = (
         container.analytics_use_case.calculate_chart_data(range_q)
     )
-    
+
     return templates.TemplateResponse(
         "analytics.html",
         {

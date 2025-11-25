@@ -24,7 +24,7 @@ class PackageUpdate(BaseModel):
 
 class PackageResponse(PackageBase):
     id: int
-    
+
     class Config:
         from_attributes = True
 

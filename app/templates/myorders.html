@@ -357,7 +357,7 @@
 
 {% block content %}
 <div class="dashboard-layout">
-  <!-- Sidebar -->
+  
   <aside class="dashboard-sidebar">
     <div class="profile-card">
       {% if request.session.get('avatar_url') %}
@@ -384,13 +384,13 @@
     </div>
   </aside>
   
-  <!-- Main Content -->
+  
   <main class="dashboard-main">
     <div class="dashboard-header">
       <h1 class="dashboard-title">My Orders</h1>
     </div>
     
-    <!-- Filters -->
+    
     <div class="filters" id="filters">
       <button class="filter-tab active" data-status="Active">Active</button>
       <button class="filter-tab" data-status="Completed">Completed</button>
@@ -401,7 +401,7 @@
       <h2 class="active-orders-header" id="activeOrdersHeader">Active orders</h2>
     </div>
     
-    <!-- Orders List -->
+    
     <div class="orders-grid" id="ordersGrid">
       {% if orders %}
         {% for order in orders %}
@@ -416,14 +416,12 @@
           
           <div class="order-price">${{ order.package.price if order.package else 'N/A' }}</div>
           
-          {% if order.status in ['Active', 'Late', 'Revision'] %}
-          <div class="order-time {% if order.status == 'Late' %}late{% else %}normal{% endif %}">
+          {% if order.status in ['Active', 'Revision'] %}
+          <div class="order-time normal">
             <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
               <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path>
             </svg>
-            {% if order.status == 'Late' %}
-              Late
-            {% elif order.due_date %}
+            {% if order.due_date %}
               <span data-countdown="{{ order.due_date.isoformat() }}"></span>
             {% else %}
               N/A

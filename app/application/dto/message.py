@@ -14,7 +14,7 @@ class MessageResponse(BaseModel):
     message_text: str
     created_at: datetime
     is_read: bool
-    
+
     class Config:
         from_attributes = True
 

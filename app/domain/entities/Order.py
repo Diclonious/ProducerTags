@@ -25,15 +25,15 @@ class Order(Base):
     review_text = Column(Text, nullable=True)
     completed_date = Column(DateTime, nullable=True)
     cancelled_date = Column(DateTime, nullable=True)
-    
-    # Dispute system fields
-    request_type = Column(String(50), nullable=True)  # 'revision', 'cancellation', 'extend_delivery'
+
+
+    request_type = Column(String(50), nullable=True)
     request_message = Column(Text, nullable=True)
     cancellation_reason = Column(String(100), nullable=True)
     cancellation_message = Column(Text, nullable=True)
     extension_days = Column(Integer, nullable=True)
     extension_reason = Column(Text, nullable=True)
-    requested_by_admin = Column(String(10), nullable=True)  # 'true' or 'false'
+    requested_by_admin = Column(String(10), nullable=True)
 
     user = relationship("User", back_populates="orders")
     package = relationship("Package")

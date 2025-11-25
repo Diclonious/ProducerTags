@@ -11,4 +11,3 @@ itsdangerous==2.2.0
 
 starlette~=0.48.0
 passlib~=1.7.4
-argon2-cffi==23.1.0

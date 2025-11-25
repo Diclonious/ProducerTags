@@ -35,14 +35,14 @@ async def resolution_center(
         .filter(Order.id == order_id)
         .first()
     )
-    
+
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
-    
-    # Check access
+
+
     if not current_user.is_admin and order.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Forbidden")
-    
+
     return templates.TemplateResponse(
         "resolution_center.html",
         {
@@ -67,31 +67,31 @@ async def submit_resolution_request(
     container = Depends(get_service_container)
 ):
     """Submit a resolution request"""
-    # Get order
+
     if current_user.is_admin:
         order = container.order_repository.get_by_id(order_id)
     else:
         order = container.order_repository.get_by_user_and_id(current_user.id, order_id)
-    
+
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
-    
-    # Validate revision requests
+
+
     if request_type == "revision" and order.status in ["Active", "In dispute", "Revision"]:
         raise HTTPException(
             status_code=400,
             detail="Cannot request revision at this time. Revision requests can only be made for delivered orders that are not already in revision or dispute."
         )
-    
-    # Handle different request types
+
+
     if request_type == "cancel" or request_type == "cancellation":
-        # Prevent cancellation requests when order is already in dispute
+
         if order.status == "In dispute":
             raise HTTPException(
                 status_code=400,
                 detail="Cannot request cancellation when order is already in dispute. Please resolve the existing dispute first."
             )
-        
+
         resolution_data = ResolutionRequest(
             request_type="cancellation",
             cancellation_reason=cancellation_reason,
@@ -102,18 +102,18 @@ async def submit_resolution_request(
             return RedirectResponse(f"/order/{order_id}", status_code=HTTP_302_FOUND)
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))
-    
+
     elif request_type == "extension" or request_type == "extend_delivery":
         if not extension_days or extension_days <= 0:
             raise HTTPException(status_code=400, detail="Extension days must be greater than 0")
-        
-        # Prevent extension requests when order is already in dispute
+
+
         if order.status == "In dispute":
             raise HTTPException(
                 status_code=400,
                 detail="Cannot request extension when order is already in dispute. Please resolve the existing dispute first."
             )
-        
+
         resolution_data = ResolutionRequest(
             request_type="extend_delivery",
             extension_days=extension_days,
@@ -124,7 +124,7 @@ async def submit_resolution_request(
             return RedirectResponse(f"/order/{order_id}", status_code=HTTP_302_FOUND)
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))
-    
+
     elif request_type == "dispute":
         resolution_data = ResolutionRequest(
             request_type="dispute",
@@ -135,19 +135,19 @@ async def submit_resolution_request(
             return RedirectResponse(f"/order/{order_id}", status_code=HTTP_302_FOUND)
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))
-    
+
     elif request_type == "revision":
-        # This is handled by the revision route, but included for completeness
+
         if order.status != "Delivered":
             raise HTTPException(status_code=400, detail="Cannot request revision in this state")
-        
-        # Reset timer - 24 hours from now
+
+
         order.due_date = get_current_time() + timedelta(hours=24)
-        
+
         order.status = "Revision"
         container.order_repository.update(order)
-        
-        # Create event
+
+
         event = OrderEvent(
             order_id=order.id,
             event_type="revision_requested",
@@ -157,8 +157,8 @@ async def submit_resolution_request(
         )
         container.db.add(event)
         container.db.commit()
-        
-        # Notify admin
+
+
         admins = container.user_repository.get_admins()
         for admin in admins:
             container.notification_use_case.create_notification(
@@ -166,9 +166,9 @@ async def submit_resolution_request(
                 "Revision Requested",
                 f"{current_user.username} requested a revision on order #{order.id}"
             )
-        
+
         return RedirectResponse(f"/order/{order_id}", status_code=HTTP_302_FOUND)
-    
+
     else:
         raise HTTPException(status_code=400, detail="Invalid request type")
 
@@ -183,11 +183,11 @@ async def approve_resolution_request(
     """Approve a resolution request (admin only)"""
     if not current_user.is_admin:
         raise HTTPException(status_code=403, detail="Forbidden")
-    
+
     order = container.order_repository.get_by_id(order_id)
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
-    
+
     try:
         container.order_use_case.approve_resolution_request(order_id, current_user.id)
         return RedirectResponse(f"/order/{order_id}/resolution", status_code=HTTP_302_FOUND)
@@ -206,11 +206,11 @@ async def reject_resolution_request(
     """Reject a resolution request (admin only)"""
     if not current_user.is_admin:
         raise HTTPException(status_code=403, detail="Forbidden")
-    
+
     order = container.order_repository.get_by_id(order_id)
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
-    
+
     try:
         container.order_use_case.reject_resolution_request(order_id, current_user.id, rejection_message)
         return RedirectResponse(f"/order/{order_id}/resolution", status_code=HTTP_302_FOUND)

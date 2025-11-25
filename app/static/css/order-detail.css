@@ -1,15 +1,12 @@
-/**
- * Order Detail Page Styles
- * Modern, clean design for order timeline and details
- */
 
-/* Order Detail Wrapper */
+
+
 .order-detail-wrapper {
   position: relative;
   min-height: 100vh;
 }
 
-/* Order Detail Layout */
+
 .order-detail-layout {
   display: grid;
   grid-template-columns: 1fr 400px;
@@ -19,12 +16,12 @@
   padding: var(--space-6);
 }
 
-/* Main Content */
+
 .order-main-content {
   min-width: 0;
 }
 
-/* Page Header */
+
 .order-header {
   display: flex;
   justify-content: flex-start;
@@ -44,7 +41,7 @@
   color: var(--text-secondary);
 }
 
-/* Order Started Event Card */
+
 .order-started-card {
   display: flex;
   align-items: stretch;
@@ -84,7 +81,7 @@
   line-height: var(--leading-relaxed);
 }
 
-/* Info Card */
+
 .info-card {
   background: var(--surface);
   border: 1px solid var(--border-default);
@@ -119,7 +116,7 @@
   color: var(--text-primary);
 }
 
-/* Requirements Card */
+
 .requirements-card {
   background: var(--surface);
   border: 1px solid var(--border-default);
@@ -178,7 +175,7 @@
   white-space: pre-wrap;
 }
 
-/* Timeline */
+
 .timeline {
   position: relative;
   margin-bottom: var(--space-8);
@@ -337,7 +334,7 @@
   line-height: var(--leading-relaxed);
 }
 
-/* Attachments */
+
 .attachments {
   padding-top: var(--space-4);
   border-top: 1px solid var(--border-subtle);
@@ -410,7 +407,7 @@
   transform: translateY(-1px);
 }
 
-/* Action Buttons */
+
 .order-actions {
   display: flex;
   gap: var(--space-4);
@@ -433,7 +430,7 @@
   margin-bottom: var(--space-4);
 }
 
-/* Modal */
+
 #deliverModal {
   display: none;
   position: fixed;
@@ -516,9 +513,7 @@
   margin-top: var(--space-6);
 }
 
-/* ============================================
-   SIDEBAR (Order Details)
-   ============================================ */
+
 .order-sidebar {
   position: sticky;
   top: var(--space-6);
@@ -551,7 +546,7 @@
   gap: var(--space-2);
 }
 
-/* Service Preview */
+
 .service-preview {
   display: flex;
   gap: var(--space-4);
@@ -639,7 +634,7 @@
   color: #f87171;
 }
 
-/* Countdown Timer */
+
 .countdown-timer {
   display: flex;
   align-items: center;
@@ -712,7 +707,7 @@
 }
 
 
-/* User Info */
+
 .user-info {
   display: flex;
   gap: var(--space-4);
@@ -798,7 +793,7 @@
 }
 
 
-/* Order Summary */
+
 .order-summary-list {
   display: flex;
   flex-direction: column;
@@ -831,7 +826,7 @@
   text-align: right;
 }
 
-/* Track Order */
+
 .track-order {
   display: flex;
   flex-direction: column;
@@ -890,9 +885,7 @@
   color: var(--text-primary);
 }
 
-/* ============================================
-   SUPPORT SECTION
-   ============================================ */
+
 .support-actions {
   display: flex;
   flex-direction: column;
@@ -956,9 +949,7 @@
   line-height: var(--leading-snug);
 }
 
-/* ============================================
-   CHAT SIDEBAR
-   ============================================ */
+
 .chat-sidebar {
   position: fixed;
   top: 0;
@@ -1209,7 +1200,7 @@
   word-wrap: break-word;
 }
 
-/* Sidebar Overlay */
+
 .sidebar-overlay {
   display: none;
   position: fixed;
@@ -1229,20 +1220,20 @@
   opacity: 1;
 }
 
-/* Responsive */
+
 @media (max-width: 1024px) {
   .order-detail-layout {
-    grid-template-columns: 1fr; /* Stack main content and sidebar */
+    grid-template-columns: 1fr; 
   }
   
   .order-sidebar {
-    position: static; /* No longer sticky */
+    position: static; 
     max-height: none;
   }
   
   .chat-sidebar {
     width: 100%;
-    max-width: 400px; /* Keep max width for chat on larger mobile */
+    max-width: 400px; 
   }
 }
 

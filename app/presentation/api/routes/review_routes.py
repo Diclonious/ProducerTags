@@ -25,7 +25,7 @@ async def my_reviews(
 ):
     """View reviews"""
     if current_user.is_admin:
-        # Admin: show all reviews
+
         orders = (
             container.db.query(Order)
             .options(joinedload(Order.package), joinedload(Order.user))
@@ -35,7 +35,7 @@ async def my_reviews(
         )
         template_name = "adminreviews.html"
     else:
-        # User: show only their reviews
+
         orders = (
             container.db.query(Order)
             .options(joinedload(Order.package))
@@ -44,7 +44,7 @@ async def my_reviews(
             .all()
         )
         template_name = "myreviews.html"
-    
+
     return templates.TemplateResponse(
         template_name,
         {"request": request, "orders": orders}

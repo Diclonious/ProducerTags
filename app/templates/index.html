@@ -439,7 +439,7 @@
 {% endblock %}
 
 {% block content %}
-<!-- Hero Section -->
+
   <section class="hero">
   <div class="hero-content">
     <div class="hero-badge">
@@ -454,7 +454,7 @@
       Elevate your sound with expert tagging that makes your beats stand out.
     </p>
     
-    <!-- Audio Player -->
+    
     {% if audio_file %}
     <div class="hero-audio-player">
       <audio id="heroAudio" src="{{ url_for('static', path='audio/' + audio_file) }}" preload="metadata"></audio>
@@ -518,7 +518,7 @@
     </div>
   </section>
 
-<!-- Reviews Section -->
+
 <section id="reviews" class="reviews-section">
   <div class="section-header">
     <span class="section-badge">Testimonials</span>

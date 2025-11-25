@@ -14,13 +14,13 @@ class Delivery(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     order_id = Column(Integer, ForeignKey("orders.id"), nullable=False)
-    delivery_number = Column(Integer, nullable=False)  # 1, 2, 3, etc.
+    delivery_number = Column(Integer, nullable=False)
     response_text = Column(Text, nullable=True)
-    delivery_file = Column(String(255), nullable=True)  # Keep for backward compatibility
+    delivery_file = Column(String(255), nullable=True)
     delivered_at = Column(DateTime, nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # Admin who delivered
-    
-    # Relationships
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+
     order = relationship("Order", back_populates="deliveries")
     user = relationship("User")
     files = relationship("DeliveryFile", back_populates="delivery", cascade="all, delete-orphan")

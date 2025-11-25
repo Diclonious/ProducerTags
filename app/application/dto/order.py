@@ -8,7 +8,7 @@ class PaymentInfo(BaseModel):
     card_holder: str = Field(..., min_length=3)
     card_expiry: str = Field(..., pattern=r'^\d{2}/\d{2}$')
     card_cvv: str = Field(..., min_length=3, max_length=4)
-    
+
     @field_validator('card_number')
     @classmethod
     def clean_card_number(cls, v):
@@ -44,14 +44,14 @@ class OrderResponse(BaseModel):
     review_text: Optional[str] = None
     completed_date: Optional[datetime] = None
     cancelled_date: Optional[datetime] = None
-    
+
     class Config:
         from_attributes = True
 
 
 class OrderDeliver(BaseModel):
     response_text: str
-    files: List[str]  # File paths
+    files: List[str]
 
 
 class OrderReview(BaseModel):
@@ -60,7 +60,7 @@ class OrderReview(BaseModel):
 
 
 class ResolutionRequest(BaseModel):
-    request_type: str  # 'revision', 'cancellation', 'extend_delivery', 'dispute'
+    request_type: str
     message: Optional[str] = None
     dispute_message: Optional[str] = None
     cancellation_reason: Optional[str] = None

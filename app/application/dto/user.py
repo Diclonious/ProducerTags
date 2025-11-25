@@ -23,7 +23,7 @@ class UserUpdate(BaseModel):
 class UserResponse(UserBase):
     id: int
     avatar: Optional[str] = None
-    
+
     class Config:
         from_attributes = True
 

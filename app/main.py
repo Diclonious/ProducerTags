@@ -6,7 +6,6 @@ from pathlib import Path
 
 from app.infrastructure.database.startup import initialize_database
 
-# Import route modules
 from app.presentation.api.routes import (
     auth_routes,
     order_routes,
@@ -18,28 +17,23 @@ from app.presentation.api.routes import (
     analytics_routes
 )
 
-# Create FastAPI application
 app = FastAPI(
     title="TaggedByBelle",
     description="Order management system",
     version="2.0.0"
 )
 
-# Base directory
 BASE_DIR = Path(__file__).resolve().parent
 
-# Add session middleware
-app.add_middleware(SessionMiddleware, secret_key="change-me")
+import os
+app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY", "change-me-in-production"))
 
-# Setup upload directory
 UPLOAD_DIR = BASE_DIR / "uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)
 
-# Mount static files
 app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 
-# Register route modules
 app.include_router(auth_routes.router)
 app.include_router(order_routes.router)
 app.include_router(package_routes.router)
@@ -52,9 +46,6 @@ app.include_router(analytics_routes.router)
 
 @app.on_event("startup")
 def startup_event():
-    """Initialize database on application startup"""
-    # Run initialization synchronously but with error handling
-    # This will block startup but fail fast if database is unavailable
     try:
         initialize_database()
     except Exception as e:

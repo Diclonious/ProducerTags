@@ -14,9 +14,9 @@ class DeliveryFile(Base):
     delivery_id = Column(Integer, ForeignKey("deliveries.id"), nullable=False)
     filename = Column(String(255), nullable=False)
     original_filename = Column(String(255), nullable=True)
-    file_size = Column(Integer, nullable=True)  # in bytes
+    file_size = Column(Integer, nullable=True)
     uploaded_at = Column(DateTime, nullable=False)
-    
-    # Relationships
+
+
     delivery = relationship("Delivery", back_populates="files")
 

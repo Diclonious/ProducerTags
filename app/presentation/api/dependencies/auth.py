@@ -20,7 +20,7 @@ def get_current_user(request: Request, db: Session = Depends(get_db)) -> User | 
     user_id = request.session.get("user_id")
     if not user_id:
         return None
-    
+
     container = get_service_container(db)
     return container.user_repository.get_by_id(user_id)
 

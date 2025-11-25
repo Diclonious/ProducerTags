@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from app.domain.entities.Order import Order
 
-# Use Argon2 instead of bcrypt
+
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
 
@@ -24,7 +24,7 @@ class User(Base):
     notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
 
     def set_password(self, password: str):
-        # Argon2 has no 72-byte limit, so no truncation needed
+
         self.hashed_password = pwd_context.hash(password)
 
     def check_password(self, password: str):

@@ -11,8 +11,8 @@ from app.domain.entities.Package import Package
 def initialize_database():
     """Initialize database tables and default data"""
     print("[*] Starting database initialization...")
-    
-    # Ensure all models are imported
+
+
     from app.domain.entities.User import User
     from app.domain.entities.Order import Order
     from app.domain.entities.Package import Package
@@ -22,11 +22,11 @@ def initialize_database():
     from app.domain.entities.OrderEvent import OrderEvent
     from app.domain.entities.Message import Message
     from app.domain.entities.Notification import Notification
-    
-    # Test database connection first
+
+
     try:
         print("[*] Testing database connection...")
-        # Use connect() with timeout handling
+
         conn = engine.connect()
         try:
             conn.execute(text("SELECT 1"))
@@ -44,22 +44,22 @@ def initialize_database():
         import traceback
         traceback.print_exc()
         return
-    
+
     db = SessionLocal()
-    
+
     try:
-        # Create tables
+
         print("[*] Creating database tables...")
         Base.metadata.create_all(bind=engine)
         print("[OK] Database tables created/verified")
-        
-        # Add dispute system columns if they don't exist
+
+
         try:
             result = db.execute(text("SHOW COLUMNS FROM orders LIKE 'request_type'"))
             if not result.fetchone():
                 print("[*] Adding dispute system columns...")
                 db.execute(text("""
-                    ALTER TABLE orders 
+                    ALTER TABLE orders
                     ADD COLUMN request_type VARCHAR(50) NULL,
                     ADD COLUMN request_message TEXT NULL,
                     ADD COLUMN cancellation_reason VARCHAR(100) NULL,
@@ -75,8 +75,8 @@ def initialize_database():
         except Exception as e:
             print(f"[WARN] Migration warning: {e}")
             db.rollback()
-        
-        # Create default admin user
+
+
         print("[*] Checking admin user...")
         admin = db.query(User).filter(User.username == "Kohina").first()
         if not admin:
@@ -87,8 +87,8 @@ def initialize_database():
             print("[OK] Admin user created: Kohina / Luna123!")
         else:
             print("[OK] Admin user already exists")
-        
-        # Create default packages
+
+
         print("[*] Checking default packages...")
         if db.query(Package).count() == 0:
             default_packages = [
@@ -106,7 +106,7 @@ def initialize_database():
             print("[OK] Default packages created")
         else:
             print("[OK] Default packages already exist")
-        
+
         print("[OK] Database initialization completed successfully!")
     except Exception as e:
         print(f"[ERROR] Error during database initialization: {e}")

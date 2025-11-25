@@ -18,22 +18,22 @@ from app.application.use_cases.analytics_use_case import AnalyticsUseCase
 
 class ServiceContainer:
     """Container for managing service dependencies"""
-    
+
     def __init__(self, db: Session, upload_dir: Path):
         self.db = db
         self.upload_dir = upload_dir
-        
-        # Initialize repositories
+
+
         self.user_repository = UserRepository(db)
         self.order_repository = OrderRepository(db)
         self.package_repository = PackageRepository(db)
         self.message_repository = MessageRepository(db)
         self.notification_repository = NotificationRepository(db)
-        
-        # Initialize infrastructure services
+
+
         self.file_storage = FileStorageService(upload_dir)
-        
-        # Initialize use cases
+
+
         self.auth_use_case = AuthUseCase(self.user_repository)
         self.order_use_case = OrderUseCase(
             self.order_repository,

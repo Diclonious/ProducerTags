@@ -57,7 +57,7 @@ async def select_package(
     package = container.package_use_case.get_package_by_id(package_id)
     if not package:
         return RedirectResponse(url="/order/new", status_code=HTTP_302_FOUND)
-    
+
     return templates.TemplateResponse(
         "order_form.html",
         {"request": request, "package": package}
@@ -77,15 +77,15 @@ async def submit_order(
     container = Depends(get_service_container)
 ):
     """Submit a new order"""
-    # Validate payment info
+
     card_number_clean = card_number.replace(" ", "").replace("-", "")
     card_expiry_clean = card_expiry.replace("/", "")
-    
+
     package = container.package_use_case.get_package_by_id(package_id)
     if not package:
         return RedirectResponse(url="/order/new", status_code=HTTP_302_FOUND)
-    
-    # Payment validation
+
+
     if not card_number_clean or len(card_number_clean) < 13 or len(card_number_clean) > 19:
         return templates.TemplateResponse(
             "order_form.html",
@@ -95,7 +95,7 @@ async def submit_order(
                 "error": "Invalid card number. Please check your payment information."
             }
         )
-    
+
     if not card_holder or len(card_holder.strip()) < 3:
         return templates.TemplateResponse(
             "order_form.html",
@@ -105,7 +105,7 @@ async def submit_order(
                 "error": "Invalid cardholder name. Please check your payment information."
             }
         )
-    
+
     if not card_expiry_clean or len(card_expiry_clean) != 4:
         return templates.TemplateResponse(
             "order_form.html",
@@ -115,18 +115,18 @@ async def submit_order(
                 "error": "Invalid expiry date. Please use MM/YY format."
             }
         )
-    
-    # Validate expiry date
+
+
     try:
         expiry_month = int(card_expiry_clean[:2])
         expiry_year = int(card_expiry_clean[2:])
         current_date = get_current_time()
         current_year = current_date.year % 100
         current_month = current_date.month
-        
+
         if expiry_month < 1 or expiry_month > 12:
             raise ValueError("Invalid month")
-        
+
         if expiry_year < current_year or (expiry_year == current_year and expiry_month < current_month):
             return templates.TemplateResponse(
                 "order_form.html",
@@ -145,7 +145,7 @@ async def submit_order(
                 "error": "Invalid expiry date format. Please use MM/YY format."
             }
         )
-    
+
     if not card_cvv or len(card_cvv) < 3 or len(card_cvv) > 4:
         return templates.TemplateResponse(
             "order_form.html",
@@ -155,21 +155,21 @@ async def submit_order(
                 "error": "Invalid CVV. Please check your payment information."
             }
         )
-    
-    # Get tags and moods from form
+
+
     form = await request.form()
     tags = [t.strip() for t in form.getlist("tags") if t.strip()]
     moods = [m.strip() for m in form.getlist("moods")]
-    
-    # Create payment info DTO
+
+
     payment_info = PaymentInfo(
         card_number=card_number,
         card_holder=card_holder,
         card_expiry=card_expiry,
         card_cvv=card_cvv
     )
-    
-    # Create order DTO
+
+
     order_data = OrderCreate(
         package_id=package_id,
         details=details,
@@ -177,17 +177,17 @@ async def submit_order(
         moods=moods,
         payment=payment_info
     )
-    
+
     try:
-        # Create order using use case
+
         order = container.order_use_case.create_order(current_user.id, order_data)
-        
-        # Create tags (temporary - would be in use case with Tag repository)
+
+
         for tag_value, mood_value in zip(tags, moods):
             tag = Tag(order_id=order.id, name=tag_value, mood=mood_value)
             container.db.add(tag)
         container.db.commit()
-        
+
         return RedirectResponse(url="/myorders", status_code=HTTP_302_FOUND)
     except ValueError as e:
         return templates.TemplateResponse(
@@ -207,17 +207,17 @@ async def my_orders(
     container = Depends(get_service_container)
 ):
     """User's orders dashboard"""
-    # Update late orders
+
     update_late_orders(container)
-    
-    # Get orders
+
+
     orders = container.order_use_case.get_orders_for_user(current_user.id)
-    
-    # Calculate monthly revenue
+
+
     now = get_current_time()
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     spent_eur = container.order_repository.get_revenue(current_user.id, "Completed", month_start)
-    
+
     return templates.TemplateResponse(
         "myorders.html",
         {
@@ -237,20 +237,20 @@ async def my_orders_admin(
 ):
     """Admin orders dashboard"""
     update_late_orders(container)
-    
+
     orders = container.order_use_case.get_all_orders()
-    
-    # Calculate earnings
+
+
     now = get_current_time()
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     earned_eur = container.order_repository.get_revenue(None, "Completed", month_start)
-    
-    # Update session
+
+
     try:
         request.session["admin_month_earnings"] = round(earned_eur, 2)
     except Exception:
         pass
-    
+
     return templates.TemplateResponse(
         "myorders-admin.html",
         {
@@ -272,8 +272,8 @@ async def view_order(
 ):
     """View order details"""
     update_late_orders(container)
-    
-    # Get order with relationships
+
+
     order = (
         container.db.query(Order)
         .options(
@@ -288,17 +288,17 @@ async def view_order(
         .filter(Order.id == order_id)
         .first()
     )
-    
+
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
-    
-    # Check access
+
+
     if not current_user.is_admin and order.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Forbidden")
-    
-    # Build timeline
+
+
     timeline_items = []
-    
+
     if order.deliveries:
         for delivery in order.deliveries:
             if delivery.delivered_at:
@@ -307,7 +307,7 @@ async def view_order(
                     'delivery': delivery,
                     'date': delivery.delivered_at
                 })
-    
+
     if order.events:
         for event in order.events:
             if event.event_type != 'delivered' and event.created_at:
@@ -316,7 +316,7 @@ async def view_order(
                     'event': event,
                     'date': event.created_at
                 })
-    
+
     if order.status == 'Delivered' and order.delivery_file and not order.deliveries:
         legacy_date = order.due_date or get_current_time()
         timeline_items.append({
@@ -324,14 +324,14 @@ async def view_order(
             'order': order,
             'date': legacy_date
         })
-    
+
     def get_sort_key(item):
         date = item['date']
         if date is None:
             date = datetime.min
         if not isinstance(date, datetime):
             date = datetime.min
-        
+
         priority = 0
         if item.get('type') == 'event':
             event = item.get('event')
@@ -340,27 +340,27 @@ async def view_order(
                     priority = 1
                 elif event.event_type == 'request_approved':
                     priority = 0
-        
+
         return (date, priority)
-    
+
     timeline_items.sort(key=get_sort_key, reverse=False)
-    
-    # Mark messages as read
+
+
     if order.messages:
         for msg in order.messages:
             if msg.sender_id != current_user.id and not msg.is_read:
                 msg.is_read = True
         container.db.commit()
-    
-    # Get admin user for seller info
+
+
     admin_user = None
     if not current_user.is_admin:
         admin_user = container.user_repository.get_admins()[0] if container.user_repository.get_admins() else None
-    
+
     file_url = None
     if order.delivery_file:
         file_url = request.url_for("uploads", path=order.delivery_file)
-    
+
     return templates.TemplateResponse(
         "order_detail.html",
         {
@@ -402,36 +402,36 @@ async def admin_deliver_order(
     """Admin deliver an order"""
     if not files:
         raise HTTPException(status_code=400, detail="At least one file is required")
-    
+
     order = container.order_repository.get_by_id(order_id)
     if not order or order.status not in ["Active", "Revision", "Late"]:
         raise HTTPException(status_code=400, detail="Cannot deliver in this state")
-    
-    # Get delivery number
+
+
     delivery_count = container.db.query(Delivery).filter(Delivery.order_id == order_id).count()
     delivery_number = delivery_count + 1
-    
-    # Save files
+
+
     saved_files = []
     primary_filename = None
-    
+
     for file in files:
         filename = container.file_storage.save_uploaded_file(file, "delivery")
         file_path = container.file_storage.get_file_path(filename)
         content = await file.read()
         with open(file_path, "wb") as f:
             f.write(content)
-        
+
         saved_files.append({
             'filename': filename,
             'original_filename': file.filename,
             'size': len(content)
         })
-        
+
         if primary_filename is None:
             primary_filename = filename
-    
-    # Create delivery
+
+
     delivery = Delivery(
         order_id=order_id,
         delivery_number=delivery_number,
@@ -442,8 +442,8 @@ async def admin_deliver_order(
     )
     container.db.add(delivery)
     container.db.flush()
-    
-    # Create delivery files
+
+
     for file_info in saved_files:
         delivery_file = DeliveryFile(
             delivery_id=delivery.id,
@@ -453,14 +453,14 @@ async def admin_deliver_order(
             uploaded_at=get_current_time()
         )
         container.db.add(delivery_file)
-    
-    # Update order
+
+
     order.status = "Delivered"
     order.response = response_text
     order.delivery_file = primary_filename
     container.order_repository.update(order)
-    
-    # Create event
+
+
     event = OrderEvent(
         order_id=order.id,
         event_type="delivered",
@@ -470,14 +470,14 @@ async def admin_deliver_order(
     )
     container.db.add(event)
     container.db.commit()
-    
-    # Notify customer
+
+
     container.notification_use_case.create_notification(
         order.user_id, order.id, "delivered",
         "Order Delivered",
         f"Your order #{order.id} has been delivered!"
     )
-    
+
     return RedirectResponse(url="/myorders-admin", status_code=HTTP_302_FOUND)
 
 
@@ -493,18 +493,18 @@ async def user_request_revision(
     order = container.order_repository.get_by_id(order_id)
     if not order or order.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Forbidden")
-    
+
     if order.status != "Delivered":
         raise HTTPException(status_code=400, detail="Cannot request revision in this state")
-    
-    # Reset timer
+
+
     if order.package and order.package.delivery_days:
         order.due_date = get_current_time() + timedelta(hours=24)
-    
+
     order.status = "Revision"
     container.order_repository.update(order)
-    
-    # Create event
+
+
     event = OrderEvent(
         order_id=order.id,
         event_type="revision_requested",
@@ -514,8 +514,8 @@ async def user_request_revision(
     )
     container.db.add(event)
     container.db.commit()
-    
-    # Notify admin
+
+
     admins = container.user_repository.get_admins()
     for admin in admins:
         container.notification_use_case.create_notification(
@@ -523,7 +523,7 @@ async def user_request_revision(
             "Revision Requested",
             f"{current_user.username} requested a revision on order #{order.id}"
         )
-    
+
     return RedirectResponse("/myorders", status_code=HTTP_302_FOUND)
 
 
@@ -538,10 +538,10 @@ async def review_order(
     order = container.order_repository.get_by_id(order_id)
     if not order or order.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Forbidden")
-    
+
     if order.status != "Completed":
         raise HTTPException(status_code=400, detail="Cannot review this order")
-    
+
     return templates.TemplateResponse(
         "review_form.html",
         {"request": request, "order": order}
@@ -559,7 +559,7 @@ async def submit_review(
 ):
     """Submit a review"""
     review_data = OrderReview(review=rating, review_text=review_text)
-    
+
     try:
         order = container.order_use_case.submit_review(order_id, current_user.id, review_data)
         return RedirectResponse(url="/myorders", status_code=302)
@@ -578,9 +578,9 @@ async def completed_orders(
         orders = container.order_repository.get_by_status("Completed")
     else:
         orders = container.order_repository.get_by_user_and_status(current_user.id, "Completed")
-    
+
     orders.sort(key=lambda x: x.due_date or datetime.min, reverse=True)
-    
+
     return templates.TemplateResponse(
         "completed_orders.html",
         {
@@ -603,47 +603,47 @@ async def download_delivered_file(
     order = container.order_repository.get_by_id(order_id)
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
-    
+
     if order.user_id != current_user.id and not current_user.is_admin:
         raise HTTPException(status_code=403, detail="Not authorized")
-    
-    # Try DeliveryFile first
+
+
     delivery_file = container.db.query(DeliveryFile).filter(
         DeliveryFile.id == file_or_delivery_id
     ).first()
-    
+
     if delivery_file:
         delivery = container.db.query(Delivery).filter(
             Delivery.id == delivery_file.delivery_id,
             Delivery.order_id == order_id
         ).first()
-        
+
         if not delivery:
             raise HTTPException(status_code=404, detail="Delivery file not found")
-        
+
         file_path = container.file_storage.get_file_path(delivery_file.filename)
         if not file_path.exists():
             raise HTTPException(status_code=404, detail="File not found on server")
-        
+
         return FileResponse(
             path=str(file_path),
             filename=delivery_file.original_filename or delivery_file.filename,
             media_type="application/octet-stream"
         )
-    
-    # Fallback to delivery
+
+
     delivery = container.db.query(Delivery).filter(
         Delivery.id == file_or_delivery_id,
         Delivery.order_id == order_id
     ).first()
-    
+
     if not delivery or not delivery.delivery_file:
         raise HTTPException(status_code=404, detail="Delivery file not found")
-    
+
     file_path = container.file_storage.get_file_path(delivery.delivery_file)
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="File not found on server")
-    
+
     return FileResponse(
         path=str(file_path),
         filename=delivery.delivery_file,
@@ -662,17 +662,17 @@ async def download_legacy_delivered_file(
     order = container.order_repository.get_by_id(order_id)
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
-    
+
     if order.user_id != current_user.id and not current_user.is_admin:
         raise HTTPException(status_code=403, detail="Not authorized")
-    
+
     if not order.delivery_file:
         raise HTTPException(status_code=404, detail="No file delivered")
-    
+
     file_path = container.file_storage.get_file_path(order.delivery_file)
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="File not found")
-    
+
     return FileResponse(
         path=str(file_path),
         filename=order.delivery_file,
@@ -691,19 +691,19 @@ async def approve_request(
     order = container.order_repository.get_by_id(order_id)
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
-    
-    # Check authorization: 
-    # - If admin requested it, user (order owner) can approve
-    # - If user requested it, admin can approve
+
+
+
+
     if order.requested_by_admin == "true":
-        # Admin requested - user (order owner) should approve
+
         if order.user_id != current_user.id:
             raise HTTPException(status_code=403, detail="Forbidden")
     else:
-        # User requested - admin should approve
+
         if not current_user.is_admin:
             raise HTTPException(status_code=403, detail="Forbidden")
-    
+
     try:
         container.order_use_case.approve_resolution_request(order_id, current_user.id)
         return RedirectResponse(f"/order/{order_id}", status_code=HTTP_302_FOUND)
@@ -723,19 +723,19 @@ async def reject_request(
     order = container.order_repository.get_by_id(order_id)
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
-    
-    # Check authorization: 
-    # - If admin requested it, user (order owner) can reject
-    # - If user requested it, admin can reject
+
+
+
+
     if order.requested_by_admin == "true":
-        # Admin requested - user (order owner) should reject
+
         if order.user_id != current_user.id:
             raise HTTPException(status_code=403, detail="Forbidden")
     else:
-        # User requested - admin should reject
+
         if not current_user.is_admin:
             raise HTTPException(status_code=403, detail="Forbidden")
-    
+
     try:
         container.order_use_case.reject_resolution_request(order_id, current_user.id, rejection_message)
         return RedirectResponse(f"/order/{order_id}", status_code=HTTP_302_FOUND)
