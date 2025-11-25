@@ -23,11 +23,6 @@ uvicorn app.main:app --reload
 http://localhost:8000
 ```
 
-### 4. Login:
-```
-Admin User: Kohina
-Password: Luna123!
-```
 
 ---
 
