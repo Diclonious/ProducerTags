@@ -1,4 +1,4 @@
-"""Analytics routes (Admin only)"""
+
 from fastapi import APIRouter, Request, Depends
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
@@ -20,7 +20,7 @@ async def analytics(
     current_user: User = Depends(require_admin),
     container = Depends(get_service_container)
 ):
-    """Show analytics dashboard"""
+   
 
     stats = container.analytics_use_case.get_order_statistics()
     revenue_stats = container.analytics_use_case.get_revenue_statistics()

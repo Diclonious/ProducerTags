@@ -1,3 +1,11 @@
+/**
+ * TaggedByBelle - Main JavaScript
+ * Handles interactions, animations, and dynamic UI elements
+ */
+
+
+
+
 document.addEventListener('DOMContentLoaded', () => {
   initDropdowns();
   initModals();
@@ -113,6 +121,7 @@ function closeModal(modalId) {
 let toastContainer = null;
 
 function initToasts() {
+
   if (!document.getElementById('toast-container')) {
     toastContainer = document.createElement('div');
     toastContainer.id = 'toast-container';

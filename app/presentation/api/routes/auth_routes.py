@@ -5,6 +5,7 @@ from starlette.responses import RedirectResponse
 from starlette.status import HTTP_302_FOUND
 from pydantic import EmailStr, ValidationError, TypeAdapter
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import OperationalError, DatabaseError
 from pathlib import Path
 
 from app.infrastructure.database import get_db
@@ -41,10 +42,17 @@ async def root(request: Request, db: Session = Depends(get_db)):
     from sqlalchemy.orm import joinedload
     from app.domain.entities.Order import Order
 
-    container = get_service_container(db)
+    # Default values in case of database connection failure
+    public_reviews = []
+    tags_delivered = 0
+    avg_rating_formatted = "0.0"
+    turnaround = "24h"
+    audio_file = None
+
     try:
+        container = get_service_container(db)
 
-
+        # Query public reviews
         public_reviews = (
             db.query(Order)
             .options(joinedload(Order.package), joinedload(Order.user))
@@ -54,14 +62,14 @@ async def root(request: Request, db: Session = Depends(get_db)):
             .all()
         )
 
-
+        # Get all orders for statistics
         all_orders = container.order_repository.get_all()
 
-
+        # Calculate completed orders
         completed_orders = [o for o in all_orders if o.status == "Completed"]
         tags_delivered = len(completed_orders)
 
-
+        # Calculate average rating
         reviews = [o.review for o in all_orders if o.review is not None]
         if reviews:
             avg_rating = sum(reviews) / len(reviews)
@@ -69,24 +77,28 @@ async def root(request: Request, db: Session = Depends(get_db)):
         else:
             avg_rating_formatted = "0.0"
 
-
         turnaround = "24h"
 
-
+    except (OperationalError, DatabaseError) as e:
+        # Database connection error - use default values
+        print(f"[WARN] Database connection error on homepage: {e}")
+        print("[INFO] Using default values for homepage display")
+    except Exception as e:
+        # Other errors - log and use defaults
+        print(f"[WARN] Error loading homepage data: {e}")
+    
+    # Load audio file (doesn't require database)
+    try:
         import os
         from pathlib import Path
 
         BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
         static_audio_dir = BASE_DIR / "static" / "audio"
-        audio_file = None
         if static_audio_dir.exists():
-
             audio_files = list(static_audio_dir.glob("*.wav")) + list(static_audio_dir.glob("*.mp3"))
             if audio_files:
-
                 audio_file = sorted(audio_files, key=lambda x: x.name)[0].name
-
-    finally:
+    except Exception:
         pass
 
     return templates.TemplateResponse(
@@ -204,7 +216,7 @@ async def update_profile(
     current_user: User = Depends(require_login),
     db: Session = Depends(get_db)
 ):
-    """Update user profile"""
+    
     container = get_service_container(db)
 
 
