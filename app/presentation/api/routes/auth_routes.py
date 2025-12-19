@@ -1,4 +1,4 @@
-"""Authentication routes"""
+
 from fastapi import APIRouter, Request, Form, Depends, UploadFile, File
 from fastapi.templating import Jinja2Templates
 from starlette.responses import RedirectResponse
@@ -20,7 +20,7 @@ router = APIRouter()
 
 
 def login_user(request: Request, user: User):
-    """Helper to set session data"""
+    
     request.session.update({
         "user_id": user.id,
         "username": user.username,
@@ -38,11 +38,11 @@ def login_user(request: Request, user: User):
 
 @router.get("/")
 async def root(request: Request, db: Session = Depends(get_db)):
-    """Homepage with public reviews"""
+   
     from sqlalchemy.orm import joinedload
     from app.domain.entities.Order import Order
 
-    # Default values in case of database connection failure
+    
     public_reviews = []
     tags_delivered = 0
     avg_rating_formatted = "0.0"
@@ -52,7 +52,7 @@ async def root(request: Request, db: Session = Depends(get_db)):
     try:
         container = get_service_container(db)
 
-        # Query public reviews
+        
         public_reviews = (
             db.query(Order)
             .options(joinedload(Order.package), joinedload(Order.user))
@@ -62,14 +62,14 @@ async def root(request: Request, db: Session = Depends(get_db)):
             .all()
         )
 
-        # Get all orders for statistics
+        
         all_orders = container.order_repository.get_all()
 
-        # Calculate completed orders
+       
         completed_orders = [o for o in all_orders if o.status == "Completed"]
         tags_delivered = len(completed_orders)
 
-        # Calculate average rating
+        
         reviews = [o.review for o in all_orders if o.review is not None]
         if reviews:
             avg_rating = sum(reviews) / len(reviews)
@@ -80,14 +80,14 @@ async def root(request: Request, db: Session = Depends(get_db)):
         turnaround = "24h"
 
     except (OperationalError, DatabaseError) as e:
-        # Database connection error - use default values
+        
         print(f"[WARN] Database connection error on homepage: {e}")
         print("[INFO] Using default values for homepage display")
     except Exception as e:
-        # Other errors - log and use defaults
+       
         print(f"[WARN] Error loading homepage data: {e}")
     
-    # Load audio file (doesn't require database)
+    
     try:
         import os
         from pathlib import Path
@@ -119,7 +119,7 @@ async def root(request: Request, db: Session = Depends(get_db)):
 
 @router.get("/login")
 async def login(request: Request):
-    """Login page"""
+    
     next_url = request.query_params.get("next", "/")
     request.session["next_url"] = next_url
     return templates.TemplateResponse("login.html", {"request": request})
@@ -132,7 +132,7 @@ async def users_login(
     password: str = Form(...),
     db: Session = Depends(get_db)
 ):
-    """Handle user login"""
+    
     container = get_service_container(db)
     login_data = UserLogin(username=username, password=password)
 
@@ -150,7 +150,7 @@ async def users_login(
 
 @router.get("/signup")
 async def signup_form(request: Request):
-    """Signup page"""
+    
     return templates.TemplateResponse("signup.html", {"request": request})
 
 
@@ -162,7 +162,7 @@ async def signup(
     password: str = Form(...),
     db: Session = Depends(get_db)
 ):
-    """Handle user signup"""
+
     container = get_service_container(db)
 
     try:
@@ -191,7 +191,7 @@ async def view_profile(
     current_user: User = Depends(require_login),
     db: Session = Depends(get_db)
 ):
-    """View user profile"""
+    
     avatar_url = None
     if getattr(current_user, "avatar", None):
         avatar_url = request.url_for("uploads", path=current_user.avatar)
@@ -281,7 +281,7 @@ async def update_profile(
 
 @router.post("/logout")
 async def logout(request: Request):
-    """Handle user logout"""
+   
     request.session.clear()
     return RedirectResponse(url="/", status_code=HTTP_302_FOUND)
 

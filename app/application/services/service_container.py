@@ -17,7 +17,7 @@ from app.application.use_cases.analytics_use_case import AnalyticsUseCase
 
 
 class ServiceContainer:
-    """Container for managing service dependencies"""
+ 
 
     def __init__(self, db: Session, upload_dir: Path):
         self.db = db

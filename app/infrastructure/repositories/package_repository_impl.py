@@ -5,7 +5,6 @@ from app.domain.repositories.package_repository import IPackageRepository
 
 
 class PackageRepository(IPackageRepository):
-    """SQLAlchemy implementation of Package repository"""
 
     def __init__(self, db: Session):
         self.db = db

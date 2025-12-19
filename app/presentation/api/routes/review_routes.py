@@ -1,4 +1,4 @@
-"""Review management routes"""
+
 from fastapi import APIRouter, Request, Depends
 from fastapi.templating import Jinja2Templates
 from starlette.responses import RedirectResponse
@@ -23,7 +23,7 @@ async def my_reviews(
     current_user: User = Depends(require_login),
     container = Depends(get_service_container)
 ):
-    """View reviews"""
+    
     if current_user.is_admin:
 
         orders = (

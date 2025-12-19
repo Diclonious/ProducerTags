@@ -11,7 +11,7 @@ router = APIRouter()
 
 
 def _get_time_ago(dt):
-    """Helper to get human-readable time difference"""
+    
     from datetime import datetime
     from app.infrastructure.utils.time_utils import get_current_time
     now = get_current_time()
@@ -37,7 +37,7 @@ async def get_notifications(
     current_user: User = Depends(require_login),
     container = Depends(get_service_container)
 ):
-    """Get all notifications for current user (AJAX endpoint)"""
+    
     notifications = container.notification_use_case.get_notifications(current_user.id)
 
     notifications_data = []
@@ -62,7 +62,7 @@ async def get_unread_count(
     current_user: User = Depends(require_login),
     container = Depends(get_service_container)
 ):
-    """Get count of unread notifications"""
+    
     count = container.notification_use_case.get_unread_count(current_user.id)
     return JSONResponse(content={"count": count})
 
@@ -74,7 +74,7 @@ async def mark_notification_read(
     current_user: User = Depends(require_login),
     container = Depends(get_service_container)
 ):
-    """Mark a notification as read"""
+    
     success = container.notification_use_case.mark_as_read(notification_id, current_user.id)
     return JSONResponse(content={"success": success})
 
@@ -85,7 +85,7 @@ async def mark_all_notifications_read(
     current_user: User = Depends(require_login),
     container = Depends(get_service_container)
 ):
-    """Mark all notifications as read"""
+    
     count = container.notification_use_case.mark_all_read(current_user.id)
     return JSONResponse(content={"success": True})
 

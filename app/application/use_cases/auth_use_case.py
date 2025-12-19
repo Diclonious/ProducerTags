@@ -5,7 +5,7 @@ from app.application.dto.user import UserCreate, UserLogin
 
 
 class AuthUseCase:
-    """Use case for authentication operations"""
+   
 
     def __init__(self, user_repository: IUserRepository):
         self.user_repository = user_repository
@@ -18,8 +18,7 @@ class AuthUseCase:
         return None
 
     def create_user(self, user_data: UserCreate) -> User:
-        """Create a new user"""
-
+       
         if self.user_repository.get_by_username(user_data.username):
             raise ValueError("Username already exists")
 
@@ -36,6 +35,6 @@ class AuthUseCase:
         return self.user_repository.create(user)
 
     def get_user_by_id(self, user_id: int) -> Optional[User]:
-        """Get user by ID"""
+       
         return self.user_repository.get_by_id(user_id)
 

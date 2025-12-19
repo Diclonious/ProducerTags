@@ -8,7 +8,7 @@ from app.application.dto.message import MessageCreate
 
 
 class MessageUseCase:
-    """Use case for message operations"""
+    
 
     def __init__(
         self,
@@ -19,7 +19,7 @@ class MessageUseCase:
         self.order_repository = order_repository
 
     def get_messages_for_order(self, order_id: int, user_id: int, is_admin: bool) -> List[Message]:
-        """Get all messages for an order"""
+        
 
         order = self.order_repository.get_by_id(order_id)
         if not order:
@@ -38,7 +38,7 @@ class MessageUseCase:
         return messages
 
     def send_message(self, order_id: int, sender_id: int, message_data: MessageCreate, is_admin: bool) -> Message:
-        """Send a message in an order"""
+       
 
         order = self.order_repository.get_by_id(order_id)
         if not order:
@@ -58,10 +58,10 @@ class MessageUseCase:
         return self.message_repository.create(message)
 
     def get_unread_count(self, user_id: int, is_admin: bool) -> int:
-        """Get count of unread messages"""
+        
         return self.message_repository.get_unread_count(user_id, is_admin)
 
     def mark_all_read(self, user_id: int, is_admin: bool) -> int:
-        """Mark all messages as read"""
+       
         return self.message_repository.mark_all_read_for_user(user_id, is_admin)
 

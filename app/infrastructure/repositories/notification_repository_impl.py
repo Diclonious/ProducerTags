@@ -5,7 +5,7 @@ from app.domain.repositories.notification_repository import INotificationReposit
 
 
 class NotificationRepository(INotificationRepository):
-    """SQLAlchemy implementation of Notification repository"""
+    
 
     def __init__(self, db: Session):
         self.db = db

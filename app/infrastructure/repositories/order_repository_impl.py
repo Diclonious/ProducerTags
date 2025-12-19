@@ -8,7 +8,7 @@ from app.infrastructure.utils.time_utils import get_current_time
 
 
 class OrderRepository(IOrderRepository):
-    """SQLAlchemy implementation of Order repository"""
+    
 
     def __init__(self, db: Session):
         self.db = db

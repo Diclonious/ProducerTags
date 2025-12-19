@@ -5,7 +5,7 @@ from datetime import datetime
 
 
 class Message(Base):
-    """Message model for order-based chat communication"""
+    
     __tablename__ = "messages"
 
     id = Column(Integer, primary_key=True, index=True)

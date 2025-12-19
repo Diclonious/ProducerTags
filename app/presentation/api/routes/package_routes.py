@@ -1,4 +1,4 @@
-"""Package management routes (Admin only)"""
+
 from fastapi import APIRouter, Request, Form, Depends, HTTPException
 from fastapi.templating import Jinja2Templates
 from starlette.responses import RedirectResponse
@@ -22,7 +22,7 @@ async def list_packages(
     current_user: User = Depends(require_admin),
     container = Depends(get_service_container)
 ):
-    """List all packages (admin only)"""
+    
     packages = container.package_use_case.get_all_packages()
     return templates.TemplateResponse(
         "packages.html",
@@ -37,7 +37,6 @@ async def edit_package_form(
     current_user: User = Depends(require_admin),
     container = Depends(get_service_container)
 ):
-    """Show package edit form"""
     package = container.package_use_case.get_package_by_id(package_id)
     if not package:
         raise HTTPException(status_code=404, detail="Package not found")
@@ -60,7 +59,6 @@ async def edit_package_submit(
     current_user: User = Depends(require_admin),
     container = Depends(get_service_container)
 ):
-    """Update a package"""
     package_data = PackageUpdate(
         name=name,
         price=price,
@@ -68,7 +66,6 @@ async def edit_package_submit(
         tag_count=tag_count,
         description=description
     )
-
     try:
         container.package_use_case.update_package(package_id, package_data)
         return RedirectResponse("/packages", status_code=HTTP_302_FOUND)

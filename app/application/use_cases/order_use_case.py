@@ -15,7 +15,7 @@ from app.application.dto.order import OrderCreate, OrderDeliver, OrderReview, Re
 
 
 class OrderUseCase:
-    """Use case for order operations"""
+    
 
     def __init__(
         self,
@@ -32,7 +32,7 @@ class OrderUseCase:
         self.db = db
 
     def create_order(self, user_id: int, order_data: OrderCreate) -> Order:
-        """Create a new order"""
+      
         package = self.package_repository.get_by_id(order_data.package_id)
         if not package:
             raise ValueError("Package not found")
@@ -63,7 +63,7 @@ class OrderUseCase:
         return order
 
     def deliver_order(self, order_id: int, admin_id: int, delivery_data: OrderDeliver) -> Order:
-        """Deliver an order"""
+        
         order = self.order_repository.get_by_id(order_id)
         if not order:
             raise ValueError("Order not found")
@@ -107,7 +107,7 @@ class OrderUseCase:
         return order
 
     def complete_order(self, order_id: int, user_id: int) -> Order:
-        """Mark an order as complete"""
+        
         order = self.order_repository.get_by_id(order_id)
         if not order:
             raise ValueError("Order not found")
@@ -138,7 +138,7 @@ class OrderUseCase:
         return order
 
     def submit_review(self, order_id: int, user_id: int, review_data: OrderReview) -> Order:
-        """Submit a review for an order"""
+        
         order = self.order_repository.get_by_id(order_id)
         if not order:
             raise ValueError("Order not found")
@@ -160,15 +160,15 @@ class OrderUseCase:
         return order
 
     def get_orders_for_user(self, user_id: int) -> List[Order]:
-        """Get all orders for a user"""
+     
         return self.order_repository.get_with_relationships(user_id=user_id)
 
     def get_all_orders(self) -> List[Order]:
-        """Get all orders (admin view)"""
+        
         return self.order_repository.get_with_relationships(admin_view=True)
 
     def _notify_admins(self, order: Order, notification_type: str, title: str, message: str):
-        """Helper to notify all admins"""
+       
         from app.domain.entities.Notification import Notification
         admins = self.user_repository.get_admins()
         for admin in admins:
@@ -184,7 +184,7 @@ class OrderUseCase:
             self.notification_repository.create(notification)
 
     def _notify_user(self, user_id: int, order_id: int, notification_type: str, title: str, message: str):
-        """Helper to notify a user"""
+        
         from app.domain.entities.Notification import Notification
         notification = Notification(
             user_id=user_id,
@@ -198,7 +198,7 @@ class OrderUseCase:
         self.notification_repository.create(notification)
 
     def request_cancellation(self, order_id: int, user_id: int, resolution_data: ResolutionRequest) -> Order:
-        """Request order cancellation"""
+        
         order = self.order_repository.get_by_id(order_id)
         if not order:
             raise ValueError("Order not found")
@@ -240,7 +240,7 @@ class OrderUseCase:
         return order
 
     def request_extension(self, order_id: int, user_id: int, resolution_data: ResolutionRequest) -> Order:
-        """Request delivery extension"""
+        
         order = self.order_repository.get_by_id(order_id)
         if not order:
             raise ValueError("Order not found")
@@ -287,7 +287,7 @@ class OrderUseCase:
         return order
 
     def open_dispute(self, order_id: int, user_id: int, resolution_data: ResolutionRequest) -> Order:
-        """Open a dispute for an order"""
+       
         order = self.order_repository.get_by_id(order_id)
         if not order:
             raise ValueError("Order not found")
@@ -323,7 +323,7 @@ class OrderUseCase:
         return order
 
     def approve_resolution_request(self, order_id: int, admin_id: int) -> Order:
-        """Approve a resolution request (admin only)"""
+        
         order = self.order_repository.get_by_id(order_id)
         if not order:
             raise ValueError("Order not found")
@@ -376,7 +376,7 @@ class OrderUseCase:
         return order
 
     def reject_resolution_request(self, order_id: int, admin_id: int, rejection_message: str = "") -> Order:
-        """Reject a resolution request (admin only)"""
+        
         order = self.order_repository.get_by_id(order_id)
         if not order:
             raise ValueError("Order not found")

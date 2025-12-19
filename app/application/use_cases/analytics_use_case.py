@@ -7,13 +7,13 @@ from app.domain.repositories.order_repository import IOrderRepository
 
 
 class AnalyticsUseCase:
-    """Use case for analytics operations"""
+   
 
     def __init__(self, order_repository: IOrderRepository):
         self.order_repository = order_repository
 
     def get_order_statistics(self) -> dict:
-        """Get order statistics (counts by status)"""
+        
 
 
         all_orders = self.order_repository.get_all()
@@ -44,7 +44,7 @@ class AnalyticsUseCase:
         return stats
 
     def get_revenue_statistics(self, user_id: int | None = None) -> dict:
-        """Get revenue statistics"""
+        
         now = get_current_time()
         month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
@@ -72,7 +72,7 @@ class AnalyticsUseCase:
         }
 
     def calculate_chart_data(self, range_q: str = "monthly") -> Tuple[List[str], List[float], List[int], List[int], List[float]]:
-        """Calculate chart data for analytics"""
+       
         labels = []
         revenue_series = []
         completed_series = []
@@ -137,7 +137,7 @@ class AnalyticsUseCase:
         return labels, revenue_series, completed_series, cancelled_series, cancelled_revenue_series
 
     def get_recent_reviews(self, limit: int = 12) -> List[Order]:
-        """Get recent reviews"""
+      
         all_orders = self.order_repository.get_all()
         reviews = [o for o in all_orders if o.review is not None]
         reviews.sort(key=lambda x: x.id, reverse=True)

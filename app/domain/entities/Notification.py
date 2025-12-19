@@ -5,7 +5,7 @@ from datetime import datetime
 
 
 class Notification(Base):
-    """Notification model for user notifications"""
+    
     __tablename__ = "notifications"
 
     id = Column(Integer, primary_key=True, index=True)

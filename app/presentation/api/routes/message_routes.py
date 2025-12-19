@@ -25,7 +25,7 @@ async def send_message(
     current_user: User = Depends(require_login),
     container = Depends(get_service_container)
 ):
-    """Send a message in order chat"""
+    
     if not message_text:
         try:
             form_data = await request.form()
@@ -82,7 +82,7 @@ async def get_messages(
     current_user: User = Depends(require_login),
     container = Depends(get_service_container)
 ):
-    """Get all messages for an order (AJAX endpoint)"""
+    
     try:
         messages = container.message_use_case.get_messages_for_order(
             order_id,
@@ -114,7 +114,7 @@ async def get_unread_messages_count(
     current_user: User = Depends(require_login),
     container = Depends(get_service_container)
 ):
-    """Get count of unread messages"""
+    
     count = container.message_use_case.get_unread_count(
         current_user.id,
         current_user.is_admin
@@ -204,7 +204,7 @@ async def mark_all_messages_read(
     current_user: User = Depends(require_login),
     container = Depends(get_service_container)
 ):
-    """Mark all messages as read"""
+   
     count = container.message_use_case.mark_all_read(
         current_user.id,
         current_user.is_admin
@@ -213,7 +213,7 @@ async def mark_all_messages_read(
 
 
 def _get_time_ago(dt):
-    """Helper to get human-readable time difference"""
+    
     from datetime import datetime
     from app.infrastructure.utils.time_utils import get_current_time
     now = get_current_time()

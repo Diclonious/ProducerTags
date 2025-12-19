@@ -6,7 +6,7 @@ from app.domain.repositories.message_repository import IMessageRepository
 
 
 class MessageRepository(IMessageRepository):
-    """SQLAlchemy implementation of Message repository"""
+    
 
     def __init__(self, db: Session):
         self.db = db

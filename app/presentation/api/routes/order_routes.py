@@ -1,4 +1,4 @@
-"""Order management routes"""
+
 from fastapi import APIRouter, Request, Form, Depends, UploadFile, File, HTTPException
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import FileResponse
@@ -30,7 +30,7 @@ router = APIRouter()
 
 
 def update_late_orders(container):
-    """Update orders that are past due date"""
+    
     container.order_repository.update_late_orders()
 
 
@@ -39,7 +39,7 @@ async def new_order(
     request: Request,
     container = Depends(get_service_container)
 ):
-    """Show package selection page"""
+    
     packages = container.package_use_case.get_all_packages()
     return templates.TemplateResponse(
         "choosepackage.html",
@@ -53,7 +53,7 @@ async def select_package(
     package_id: int = Form(...),
     container = Depends(get_service_container)
 ):
-    """Select a package and show order form"""
+    
     package = container.package_use_case.get_package_by_id(package_id)
     if not package:
         return RedirectResponse(url="/order/new", status_code=HTTP_302_FOUND)
@@ -76,7 +76,7 @@ async def submit_order(
     current_user: User = Depends(require_login),
     container = Depends(get_service_container)
 ):
-    """Submit a new order"""
+    
 
     card_number_clean = card_number.replace(" ", "").replace("-", "")
     card_expiry_clean = card_expiry.replace("/", "")
@@ -206,7 +206,7 @@ async def my_orders(
     current_user: User = Depends(require_login),
     container = Depends(get_service_container)
 ):
-    """User's orders dashboard"""
+    
 
     update_late_orders(container)
 
@@ -235,7 +235,7 @@ async def my_orders_admin(
     current_user: User = Depends(require_admin),
     container = Depends(get_service_container)
 ):
-    """Admin orders dashboard"""
+    
     update_late_orders(container)
 
     orders = container.order_use_case.get_all_orders()
@@ -270,7 +270,7 @@ async def view_order(
     current_user: User = Depends(require_login),
     container = Depends(get_service_container)
 ):
-    """View order details"""
+   
     update_late_orders(container)
 
 
@@ -382,7 +382,7 @@ async def mark_order_complete(
     current_user: User = Depends(require_login),
     container = Depends(get_service_container)
 ):
-    """Mark an order as complete"""
+   
     try:
         order = container.order_use_case.complete_order(order_id, current_user.id)
         return RedirectResponse(url=f"/order/{order_id}/review", status_code=302)
@@ -399,7 +399,7 @@ async def admin_deliver_order(
     current_user: User = Depends(require_admin),
     container = Depends(get_service_container)
 ):
-    """Admin deliver an order"""
+    
     if not files:
         raise HTTPException(status_code=400, detail="At least one file is required")
 
@@ -489,7 +489,7 @@ async def user_request_revision(
     current_user: User = Depends(require_login),
     container = Depends(get_service_container)
 ):
-    """User request revision"""
+   
     order = container.order_repository.get_by_id(order_id)
     if not order or order.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Forbidden")
@@ -534,7 +534,7 @@ async def review_order(
     current_user: User = Depends(require_login),
     container = Depends(get_service_container)
 ):
-    """Show review form"""
+    
     order = container.order_repository.get_by_id(order_id)
     if not order or order.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Forbidden")
@@ -557,7 +557,7 @@ async def submit_review(
     current_user: User = Depends(require_login),
     container = Depends(get_service_container)
 ):
-    """Submit a review"""
+   
     review_data = OrderReview(review=rating, review_text=review_text)
 
     try:
@@ -573,7 +573,7 @@ async def completed_orders(
     current_user: User = Depends(require_login),
     container = Depends(get_service_container)
 ):
-    """View completed orders"""
+   
     if current_user.is_admin:
         orders = container.order_repository.get_by_status("Completed")
     else:
@@ -599,7 +599,7 @@ async def download_delivered_file(
     current_user: User = Depends(require_login),
     container = Depends(get_service_container)
 ):
-    """Download a delivered file"""
+   
     order = container.order_repository.get_by_id(order_id)
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
@@ -658,7 +658,7 @@ async def download_legacy_delivered_file(
     current_user: User = Depends(require_login),
     container = Depends(get_service_container)
 ):
-    """Download legacy delivered file"""
+    
     order = container.order_repository.get_by_id(order_id)
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
@@ -687,7 +687,7 @@ async def approve_request(
     current_user: User = Depends(require_login),
     container = Depends(get_service_container)
 ):
-    """Approve a resolution request"""
+    
     order = container.order_repository.get_by_id(order_id)
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
@@ -719,7 +719,7 @@ async def reject_request(
     current_user: User = Depends(require_login),
     container = Depends(get_service_container)
 ):
-    """Reject a resolution request"""
+    
     order = container.order_repository.get_by_id(order_id)
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")

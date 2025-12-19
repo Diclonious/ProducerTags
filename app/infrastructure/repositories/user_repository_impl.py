@@ -5,7 +5,7 @@ from app.domain.repositories.user_repository import IUserRepository
 
 
 class UserRepository(IUserRepository):
-    """SQLAlchemy implementation of User repository"""
+    
 
     def __init__(self, db: Session):
         self.db = db

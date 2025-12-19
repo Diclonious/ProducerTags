@@ -1,4 +1,4 @@
-"""Resolution center routes"""
+
 from fastapi import APIRouter, Request, Form, Depends, HTTPException
 from fastapi.templating import Jinja2Templates
 from starlette.responses import RedirectResponse
@@ -28,7 +28,7 @@ async def resolution_center(
     current_user: User = Depends(require_login),
     container = Depends(get_service_container)
 ):
-    """Show resolution center for an order"""
+   
     order = (
         container.db.query(Order)
         .options(joinedload(Order.user), joinedload(Order.package))
@@ -66,7 +66,7 @@ async def submit_resolution_request(
     current_user: User = Depends(require_login),
     container = Depends(get_service_container)
 ):
-    """Submit a resolution request"""
+    
 
     if current_user.is_admin:
         order = container.order_repository.get_by_id(order_id)
@@ -180,7 +180,7 @@ async def approve_resolution_request(
     current_user: User = Depends(require_login),
     container = Depends(get_service_container)
 ):
-    """Approve a resolution request (admin only)"""
+    
     if not current_user.is_admin:
         raise HTTPException(status_code=403, detail="Forbidden")
 
@@ -203,7 +203,7 @@ async def reject_resolution_request(
     current_user: User = Depends(require_login),
     container = Depends(get_service_container)
 ):
-    """Reject a resolution request (admin only)"""
+    
     if not current_user.is_admin:
         raise HTTPException(status_code=403, detail="Forbidden")
 
