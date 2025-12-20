@@ -255,10 +255,12 @@ class OrderUseCase:
         order.request_type = "extend_delivery"
         order.extension_days = resolution_data.extension_days
         order.extension_reason = resolution_data.extension_reason
-        order.requested_by_admin = "true" if self.user_repository.get_by_id(user_id).is_admin else "false"
+        is_admin = self.user_repository.get_by_id(user_id).is_admin
+        order.requested_by_admin = "true" if is_admin else "false"
 
-
-        if order.due_date:
+        # Only extend the due date immediately if user is requesting (not admin)
+        # If admin is requesting, wait for user approval before extending
+        if not is_admin and order.due_date:
             order.due_date = order.due_date + timedelta(days=resolution_data.extension_days)
 
         order = self.order_repository.update(order)
@@ -336,7 +338,9 @@ class OrderUseCase:
             order.status = "Cancelled"
             order.cancelled_date = get_current_time()
         elif order.request_type == "extend_delivery":
-
+            # If admin requested extension and user is approving, extend the due_date now
+            if order.requested_by_admin == "true" and order.extension_days and order.due_date:
+                order.due_date = order.due_date + timedelta(days=order.extension_days)
             order.status = "Active"
         elif order.request_type == "revision":
             order.status = "Revision"
@@ -392,8 +396,9 @@ class OrderUseCase:
             else:
                 order.status = "Delivered"
         elif order.request_type == "extend_delivery":
-
-            if order.extension_days and order.due_date:
+            # If admin requested extension and user is rejecting, don't change due_date (it wasn't extended yet)
+            # If user requested extension and admin is rejecting, revert the due_date
+            if order.requested_by_admin != "true" and order.extension_days and order.due_date:
                 order.due_date = order.due_date - timedelta(days=order.extension_days)
             order.status = "Active"
         elif order.request_type == "revision":
